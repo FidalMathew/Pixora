@@ -1,0 +1,139 @@
+import Provider from "@/components/Provider";
+import "@/styles/globals.css";
+import type {AppProps} from "next/app";
+import {GoogleOAuthProvider} from "@react-oauth/google";
+import {BuildType, OktoProvider} from "okto-sdk-react";
+import {useEffect, useState} from "react";
+import {SessionProvider} from "next-auth/react";
+
+export default function App({
+  Component,
+  pageProps: {session, ...pageProps},
+}: AppProps) {
+  const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+  return (
+    <SessionProvider session={session}>
+      <OktoProvider
+        apiKey={process.env.NEXT_PUBLIC_OKTO_APP_SECRET!}
+        buildType={BuildType.SANDBOX}
+      >
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+          <Provider
+            attribute="class"
+            enableColorScheme
+            enableSystem
+            defaultTheme="light"
+            disableTransitionOnChange
+          >
+            <Component {...pageProps} />
+          </Provider>
+        </GoogleOAuthProvider>
+      </OktoProvider>
+    </SessionProvider>
+  );
+}
+
+
+
+import {useEffect, useMemo, useState} from "react";
+import {
+  OktoContextType,
+  PortfolioData,
+  useOkto,
+  User,
+  WalletData,
+} from "okto-sdk-react";
+import {ModeToggle} from "@/components/ui/Toggletheme";
+import {Button} from "@/components/ui/button";
+import {useRouter} from "next/router";
+import {signIn, signOut, useSession} from "next-auth/react";
+import {GoogleLogin} from "@react-oauth/google";
+
+function LoginPage() {
+  const router = useRouter();
+  const [authToken, setAuthToken] = useState(null);
+  const {
+    showWidgetModal,
+    closeModal,
+    authenticate,
+    isLoggedIn,
+    logOut,
+    getUserDetails,
+    getPortfolio,
+    getWallets,
+  } = useOkto() as OktoContextType;
+
+  const handleGoogleLogin = async (credentialResponse: any) => {
+    console.log("Google login response:", credentialResponse);
+    const idToken = credentialResponse.credential;
+    console.log("google idtoken: ", idToken);
+    authenticate(idToken, async (authResponse, error) => {
+      if (authResponse) {
+        console.log("Authentication check: ", authResponse);
+        setAuthToken(authResponse.auth_token);
+        console.log("auth token received", authToken);
+      }
+      if (error) {
+        console.error("Authentication error:", error);
+      }
+    });
+  };
+
+  const onLogoutClick = () => {
+    logOut();
+  };
+
+  console.log(authToken, "auth token");
+
+  const [user, setUser] = useState<User>();
+  const [userPortfolio, setUserPortfolio] = useState<PortfolioData>();
+
+  useEffect(() => {
+    (async function () {
+      try {
+        if (isLoggedIn) {
+          const user = await getUserDetails();
+          const portfolio = await getPortfolio();
+          setUserPortfolio(portfolio);
+          setUser(user);
+        }
+      } catch (error) {
+        console.log("Error fetching user details", error);
+      }
+    })();
+  }, [isLoggedIn]);
+
+  console.log("User", user);
+
+  return (
+    <div className="bg-white text-white dark:bg-black dark:text-white h-screen w-full flex flex-col justify-center items-center">
+      {!isLoggedIn ? (
+        <GoogleLogin
+          onSuccess={handleGoogleLogin}
+          onError={() => {
+            console.log("Login Failed");
+          }}
+        />
+      ) : (
+        <div className="text-black">
+          <Button onClick={onLogoutClick}>Authenticated, Logout</Button>
+          <pre>
+            <code>{JSON.stringify(user, null, 2)}</code>
+          </pre>
+          <pre>
+            <code>{JSON.stringify(userPortfolio, null, 2)}</code>
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+//
+export default LoginPage;
