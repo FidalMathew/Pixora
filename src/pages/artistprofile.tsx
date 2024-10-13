@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import {listenNowAlbums} from "@/lib/data";
+import {useWallets} from "@privy-io/react-auth";
 import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import localFont from "next/font/local";
 
@@ -14,9 +15,13 @@ const geistMono = localFont({
   weight: "100 900",
 });
 export default function Profile() {
+  const {wallets} = useWallets();
+
+  const wallet = wallets[0];
+
   return (
     <div
-      className={`lg:h-screen min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
+      className={`h-screen min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
     >
       <Navbar />
       <div
@@ -36,8 +41,14 @@ export default function Profile() {
               <p className="font-normal text-gray-800 text-3xl font-poppins">
                 Taylor Swift
               </p>
-              <p className="font-normal text-gray-800 font-poppins">
+              <p className="font-normal text-gray-800 font-poppins text-lg">
                 321 followers
+              </p>
+              <p className="font-normal text-gray-800 font-poppins text-sm">
+                {wallet &&
+                  wallet.address.slice(0, 10) +
+                    "..." +
+                    wallet.address.slice(-4)}
               </p>
             </div>
           </div>
@@ -53,7 +64,10 @@ export default function Profile() {
             }}
           >
             {listenNowAlbums.map((album, index) => (
-              <div className="overflow-hidden rounded-md flex flex-col gap-2">
+              <div
+                className="overflow-hidden rounded-md flex flex-col gap-2"
+                key={index}
+              >
                 <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
                   <img
                     src={album.cover}

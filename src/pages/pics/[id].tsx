@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import {Button} from "@/components/ui/button";
 import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
-import {Shuffle} from "lucide-react";
+import {Heart, Share, Shuffle} from "lucide-react";
 import {useRouter} from "next/router";
 
 export default function EachPicturePage() {
@@ -32,9 +32,17 @@ export default function EachPicturePage() {
                 <p className="text-lg font-semibold">Taylor Swift</p>
               </div>
             </div>
-            <div className="flex flex-col justify-start h-full w-full px-5 pt-6 gap-4 mb-3">
+            <div className="flex flex-col justify-start h-full w-full px-5 gap-4 mb-3">
+              <div className="h-[47px] w-full flex items-center">
+                <div className="mr-2 h-10 w-10 p-2 hover:bg-gray-100 rounded-full cursor-pointer ">
+                  <Heart />
+                </div>
+                <div className="mr-2 h-10 w-10 p-2 hover:bg-gray-100 rounded-full cursor-pointer ">
+                  <Share className="" />
+                </div>
+              </div>
               <p className="font-semibold">Remixed By</p>
-              <div className="flex flex-col h-[450px] w-full mb-5 gap-4 overflow-y-auto scroll-container p-2">
+              <div className="flex flex-col h-[430px] w-full mb-5 gap-4 overflow-y-auto scroll-container p-2">
                 {Array.from({length: 7}).map((_, index) => (
                   <div
                     className="h-[70px] w-full border border-black rounded-md flex-shrink-0 flex items-center justify-around"
@@ -52,6 +60,7 @@ export default function EachPicturePage() {
                       className="rounded-full border border-slate-800 focus-visible:ring-0"
                       variant={"outline"}
                       size={"icon"}
+                      onClick={() => router.push(`/remix/${index + 1}`)}
                     >
                       <Shuffle className="h-4 w-4" />
                     </Button>
