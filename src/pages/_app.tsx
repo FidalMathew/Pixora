@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import type {AppProps} from "next/app";
 import {useEffect, useState} from "react";
 import {PrivyProvider} from "@privy-io/react-auth";
+import GlobalContextProvider from "@/context/GlobalContext";
 
 export default function App({
   Component,
@@ -21,22 +22,24 @@ export default function App({
         appearance: {
           theme: "light",
           accentColor: "#676FFF",
-          logo: "https://your-logo-url",
+          logo: "https://thegivingblock.com/wp-content/uploads/2021/08/Livepeer-LPT-logo.png",
         },
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
         },
       }}
     >
-      <Provider
-        attribute="class"
-        enableColorScheme
-        enableSystem
-        defaultTheme="light"
-        disableTransitionOnChange
-      >
-        <Component {...pageProps} />
-      </Provider>
+      <GlobalContextProvider>
+        <Provider
+          attribute="class"
+          enableColorScheme
+          enableSystem
+          defaultTheme="light"
+          disableTransitionOnChange
+        >
+          <Component {...pageProps} />
+        </Provider>
+      </GlobalContextProvider>
     </PrivyProvider>
   );
 }

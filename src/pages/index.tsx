@@ -8,8 +8,15 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
-import {usePrivy} from "@privy-io/react-auth";
-import {useEffect} from "react";
+import {EIP1193Provider, usePrivy, useWallets} from "@privy-io/react-auth";
+import {useEffect, useState} from "react";
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  PublicClient,
+  WalletClient,
+} from "viem";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -25,12 +32,13 @@ const geistMono = localFont({
 export default function Home() {
   const router = useRouter();
   const {ready, authenticated, login} = usePrivy();
-
+  const {wallets} = useWallets();
   useEffect(() => {
     if (authenticated) {
       router.push("/feed");
     }
   }, [authenticated, ready]);
+
   return (
     <div className="w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]">
       <div className="hidden bg-muted text-white relative thumbnail justify-center items-center lg:flex">
