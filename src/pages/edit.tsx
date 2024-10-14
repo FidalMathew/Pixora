@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import "./canva.css";
+// import "./canva.css";
 
 const Edit = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
