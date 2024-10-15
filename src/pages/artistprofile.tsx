@@ -1,9 +1,10 @@
+
 import Navbar from "@/components/Navbar";
 import {listenNowAlbums} from "@/lib/data";
 import {useWallets} from "@privy-io/react-auth";
 import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import localFont from "next/font/local";
-
+import FileUpload from "@/components/custom/FileUpload";
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -51,7 +52,9 @@ export default function Profile() {
                     wallet.address.slice(-4)}
               </p>
             </div>
+            <FileUpload/>
           </div>
+
         </div>
         <div className="h-full lg:w-2/3 w-full">
           <div className="h-[5%]">
