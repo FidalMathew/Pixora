@@ -1,9 +1,9 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, {useRef, useEffect, useState} from "react";
 // import "./canva.css";
 
 const Edit = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 100 });
+  const [position, setPosition] = useState({x: 0, y: 100});
   const [isDragging, setIsDragging] = useState(false);
   const [selectedImage, setSelectedImage] = useState<null | string>(null);
 
@@ -36,7 +36,7 @@ const Edit = () => {
   const [backgroundImageUrl, setBackgroundImageUrl] =
     useState("background.png");
 
-  const handleMouseDown = (e: { clientX: number; clientY: number; }) => {
+  const handleMouseDown = (e: {clientX: number; clientY: number}) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = (canvas as HTMLCanvasElement).getBoundingClientRect();
@@ -69,14 +69,14 @@ const Edit = () => {
     setIsDragging(false);
   };
 
-  const handleMouseMove = (e: { clientX: number; clientY: number; }) => {
+  const handleMouseMove = (e: {clientX: number; clientY: number}) => {
     if (isDragging && selectedImage === "person") {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = (canvas as HTMLCanvasElement).getBoundingClientRect();
       const newX = e.clientX - rect.left - (400 * scale) / 2;
       const newY = e.clientY - rect.top - (500 * scale) / 2;
-      setPosition({ x: newX, y: newY });
+      setPosition({x: newX, y: newY});
     }
   };
 
@@ -190,7 +190,7 @@ const Edit = () => {
   ]);
 
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{display: "flex"}}>
       <canvas
         ref={canvasRef}
         width={800}
@@ -198,9 +198,9 @@ const Edit = () => {
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        style={{ border: "1px solid black" }}
+        style={{border: "1px solid black"}}
       />
-      <div style={{ marginLeft: "20px" }}>
+      <div style={{marginLeft: "20px"}}>
         <h3>Adjust Properties</h3>
         <label>
           Background Image URL:

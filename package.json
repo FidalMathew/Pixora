@@ -17,6 +17,7 @@
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@react-oauth/google": "^0.12.1",
+    "@story-protocol/core-sdk": "1.1.0-stable",
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -27,6 +28,8 @@
     "okto-sdk-react": "^0.1.2",
     "react": "^18",
     "react-dom": "^18",
+    "react-moveable": "^0.56.0",
+    "react-selecto": "^1.26.3",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.21.24"
