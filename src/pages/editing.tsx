@@ -6,6 +6,7 @@ import {useEffect, useRef, useState} from "react";
 import Moveable from "react-moveable";
 import Selecto from "react-selecto";
 import {Formik, Field, Form} from "formik";
+import {Slider} from "@/components/ui/slider";
 
 export default function EditingPage() {
   const [target, setTarget] = useState<HTMLElement | null>(null); // Current moveable target
@@ -54,6 +55,55 @@ export default function EditingPage() {
     localStorage.setItem("moveablePosition", JSON.stringify(newPosition));
     localStorage.setItem("moveableSize", JSON.stringify(newSize));
   };
+
+  const [brightness, setBrightness] = useState({
+    object: 100,
+    background: 100,
+  });
+  const [contrast, setContrast] = useState({
+    object: 100,
+    background: 100,
+  });
+  const [saturation, setSaturation] = useState({
+    object: 100,
+    background: 100,
+  });
+  const [blur, setBlur] = useState({
+    object: 0,
+    background: 0,
+  });
+  const [opacity, setOpacity] = useState({
+    object: 100,
+    background: 100,
+  });
+  const [grayscale, setGrayscale] = useState({
+    object: 0,
+    background: 0,
+  });
+  const [sepia, setSepia] = useState({
+    object: 0,
+    background: 0,
+  });
+
+  const filterStyleBackground = `
+  brightness(${brightness.background}%) 
+  contrast(${contrast.background}%) 
+  saturate(${saturation.background}%) 
+  blur(${blur.background}px) 
+  opacity(${opacity.background}%) 
+  grayscale(${grayscale.background}%) 
+  sepia(${sepia.background}%)`;
+
+  const filterStyleObject = `
+  brightness(${brightness.object}%) 
+  contrast(${contrast.object}%) 
+  saturate(${saturation.object}%) 
+  blur(${blur.object}px) 
+  opacity(${opacity.object}%) 
+  grayscale(${grayscale.object}%) 
+  sepia(${sepia.object}%)`;
+
+  console.log(target, "target");
   return (
     <div className="h-screen w-full bg-white text-black dark:bg-black dark:text-white">
       <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
@@ -87,6 +137,7 @@ export default function EditingPage() {
                 src="/background.png" // Use the correct path to the public folder image
                 alt="background"
                 className="absolute top-0 left-0 w-full h-full object-cover"
+                style={{filter: filterStyleBackground}}
               />
 
               {/* Moveable image on top of background */}
@@ -99,6 +150,7 @@ export default function EditingPage() {
                   transform: `translate(${position.x}px, ${position.y}px)`, // Apply the initial position from state
                   width: `${size.width}px`, // Apply the saved width
                   height: `${size.height}px`, // Apply the saved height
+                  filter: filterStyleObject,
                 }}
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent deselection when clicking on the image
@@ -184,7 +236,7 @@ export default function EditingPage() {
             </div>
           </div>
         </div>
-        <div className="flex h-full w-[300px] rounded-xl border flex-col p-4 justify-between">
+        <div className="flex h-full w-[300px] rounded-xl border flex-col p-4 justify-start gap-4">
           <Formik initialValues={{aiprompt: ""}} onSubmit={() => {}}>
             {(formik) => (
               <Form>
@@ -203,6 +255,201 @@ export default function EditingPage() {
               </Form>
             )}
           </Formik>
+
+          {target === null ? (
+            <div className="flex flex-col border rounded-xl gap-4">
+              <p className="px-4 pt-4">Editing the Background</p>
+              <div className="flex flex-col px-4 gap-5 pb-6">
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Brightness</Label>
+                  <Slider
+                    defaultValue={[brightness.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setBrightness({
+                        object: brightness.object,
+                        background: value[0],
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Contrast</Label>
+                  <Slider
+                    defaultValue={[contrast.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setContrast({
+                        object: contrast.object,
+                        background: value[0],
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Saturation</Label>
+                  <Slider
+                    defaultValue={[saturation.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setSaturation({
+                        object: saturation.object,
+                        background: value[0],
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Blur</Label>
+                  <Slider
+                    defaultValue={[blur.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setBlur({object: blur.object, background: value[0]})
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Opacity</Label>
+                  <Slider
+                    defaultValue={[opacity.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setOpacity({object: opacity.object, background: value[0]})
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Grayscale</Label>
+                  <Slider
+                    defaultValue={[grayscale.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setGrayscale({
+                        object: grayscale.object,
+                        background: value[0],
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Sepia</Label>
+                  <Slider
+                    defaultValue={[sepia.background]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setSepia({object: sepia.object, background: value[0]})
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col border rounded-xl gap-4">
+              <p className="px-4 pt-4">Editing the Object</p>
+              <div className="flex flex-col px-4 gap-5 pb-6">
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Brightness</Label>
+                  <Slider
+                    defaultValue={[brightness.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setBrightness({
+                        object: value[0],
+                        background: brightness.background,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Contrast</Label>
+                  <Slider
+                    defaultValue={[contrast.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setContrast({
+                        object: value[0],
+                        background: contrast.background,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Saturation</Label>
+                  <Slider
+                    defaultValue={[saturation.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setSaturation({
+                        object: value[0],
+                        background: saturation.background,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Blur</Label>
+                  <Slider
+                    defaultValue={[blur.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setBlur({object: value[0], background: blur.background})
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Opacity</Label>
+                  <Slider
+                    defaultValue={[opacity.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setOpacity({
+                        object: value[0],
+                        background: opacity.background,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Grayscale</Label>
+                  <Slider
+                    defaultValue={[grayscale.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setGrayscale({
+                        object: value[0],
+                        background: grayscale.background,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="brightness">Sepia</Label>
+                  <Slider
+                    defaultValue={[sepia.object]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) =>
+                      setSepia({object: value[0], background: sepia.background})
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
