@@ -5,6 +5,7 @@ import {Textarea} from "@/components/ui/textarea";
 import {useEffect, useRef, useState} from "react";
 import Moveable from "react-moveable";
 import Selecto from "react-selecto";
+import {Formik, Field, Form} from "formik";
 
 export default function EditingPage() {
   const [target, setTarget] = useState<HTMLElement | null>(null); // Current moveable target
@@ -15,6 +16,10 @@ export default function EditingPage() {
     x: 0,
     y: 0,
   }); // Track the position of the image
+  const [size, setSize] = useState<{width: number; height: number}>({
+    width: 100,
+    height: 100,
+  });
 
   // Deselect when clicking outside the target
   const handleDeselect = (e: React.MouseEvent) => {
@@ -25,24 +30,30 @@ export default function EditingPage() {
   };
 
   useEffect(() => {
-    const savedPosition = localStorage.getItem("moveablePosition");
-    if (savedPosition) {
-      setPosition(JSON.parse(savedPosition));
-    }
-  }, []);
-
-  useEffect(() => {
     // Whenever target is set, make sure the borders are visible if there is a valid target
     if (target) {
       setShowBorders(true);
     }
   }, [target]);
+  useEffect(() => {
+    const savedPosition = localStorage.getItem("moveablePosition");
+    const savedSize = localStorage.getItem("moveableSize");
+    if (savedPosition) {
+      setPosition(JSON.parse(savedPosition)); // Parse and set the saved position
+    }
+    if (savedSize) {
+      setSize(JSON.parse(savedSize)); // Parse and set the saved size
+    }
+  }, []);
 
-  // Function to save position to localStorage
-  const savePositionToLocalStorage = (newPosition: {x: number; y: number}) => {
+  // Function to save position and size to localStorage
+  const saveToLocalStorage = (
+    newPosition: {x: number; y: number},
+    newSize: {width: number; height: number}
+  ) => {
     localStorage.setItem("moveablePosition", JSON.stringify(newPosition));
+    localStorage.setItem("moveableSize", JSON.stringify(newSize));
   };
-
   return (
     <div className="h-screen w-full bg-white text-black dark:bg-black dark:text-white">
       <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
@@ -86,6 +97,8 @@ export default function EditingPage() {
                 ref={imgRef} // Ref for Selecto and Moveable
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px)`, // Apply the initial position from state
+                  width: `${size.width}px`, // Apply the saved width
+                  height: `${size.height}px`, // Apply the saved height
                 }}
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent deselection when clicking on the image
@@ -99,7 +112,9 @@ export default function EditingPage() {
                 <Moveable
                   target={target}
                   draggable={true}
+                  resizable={true}
                   throttleDrag={0}
+                  throttleResize={0}
                   renderDirections={[
                     "n",
                     "s",
@@ -118,9 +133,25 @@ export default function EditingPage() {
                       target as HTMLElement
                     ).style.transform = `translate(${newX}px, ${newY}px)`;
                   }}
+                  onResize={({target, width, height, drag}) => {
+                    // Apply the updated size to the target element
+                    const newX = drag.beforeTranslate[0];
+                    const newY = drag.beforeTranslate[1];
+                    setPosition({x: newX, y: newY}); // Update position due to resize drag
+                    setSize({width, height}); // Update size in state
+                    (target as HTMLElement).style.width = `${width}px`;
+                    (target as HTMLElement).style.height = `${height}px`;
+                    (
+                      target as HTMLElement
+                    ).style.transform = `translate(${newX}px, ${newY}px)`;
+                  }}
                   onDragEnd={() => {
-                    savePositionToLocalStorage(position); // Save position to localStorage after dragging ends
+                    saveToLocalStorage(position, size); // Save position and size to localStorage after dragging ends
                     setShowBorders(true); // Keep borders after dragging
+                  }}
+                  onResizeEnd={() => {
+                    saveToLocalStorage(position, size); // Save position and size to localStorage after resizing ends
+                    setShowBorders(true); // Keep borders after resizing
                   }}
                 />
               )}
@@ -153,17 +184,25 @@ export default function EditingPage() {
             </div>
           </div>
         </div>
-        <div className="flex justify-start h-full w-[300px] rounded-xl border flex-col p-4">
-          <div className="flex flex-col gap-3 justify-start">
-            <Label htmlFor="aiprompt" className="">
-              Generate New Background
-            </Label>
-            <Textarea
-              name="aiprompt"
-              placeholder="Give your AI Prompt Here"
-              className="w-full h-[140px]"
-            />
-          </div>
+        <div className="flex h-full w-[300px] rounded-xl border flex-col p-4 justify-between">
+          <Formik initialValues={{aiprompt: ""}} onSubmit={() => {}}>
+            {(formik) => (
+              <Form>
+                <div className="flex flex-col gap-3 justify-start">
+                  <Label htmlFor="aiprompt" className="">
+                    Generate New Background
+                  </Label>
+                  <Textarea
+                    name="aiprompt"
+                    id="aiprompt"
+                    placeholder="Give your AI Prompt Here"
+                    className="w-full h-[140px]"
+                  />
+                  <Button type="submit">Generate</Button>
+                </div>
+              </Form>
+            )}
+          </Formik>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import {iliad} from "@/lib/chains";
 import {EIP1193Provider, usePrivy, useWallets} from "@privy-io/react-auth";
 import {useRouter} from "next/router";
 import {createContext, useEffect, useState} from "react";
@@ -9,6 +10,7 @@ import {
   PublicClient,
   WalletClient,
 } from "viem";
+import {baseSepolia} from "viem/chains";
 
 const GlobalContext = createContext({});
 
@@ -30,6 +32,9 @@ export default function GlobalContextProvider({
       const provider = await wallets[0].getEthereumProvider();
       if (provider) {
         setProvider(provider);
+        console.log("executed");
+        await wallets[0].switchChain(iliad.id);
+        console.log("executed");
         const walletClient = createWalletClient({
           transport: custom(provider),
         });

@@ -4,7 +4,9 @@ import type {AppProps} from "next/app";
 import {useEffect, useState} from "react";
 import {PrivyProvider} from "@privy-io/react-auth";
 import GlobalContextProvider from "@/context/GlobalContext";
-
+import {iliad} from "@/lib/chains";
+import {avalancheFuji, baseSepolia, sepolia} from "viem/chains";
+// import {} from "@story-protocol/react-sdk";
 export default function App({
   Component,
   pageProps: {session, ...pageProps},
@@ -24,9 +26,10 @@ export default function App({
           accentColor: "#676FFF",
           logo: "https://thegivingblock.com/wp-content/uploads/2021/08/Livepeer-LPT-logo.png",
         },
-        embeddedWallets: {
-          createOnLogin: "users-without-wallets",
-        },
+        supportedChains: [iliad, baseSepolia, sepolia, avalancheFuji],
+        // embeddedWallets: {
+        //   createOnLogin: "users-without-wallets",
+        // },
       }}
     >
       <GlobalContextProvider>
