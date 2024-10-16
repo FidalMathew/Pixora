@@ -1,10 +1,12 @@
 import Navbar from "@/components/Navbar";
 import {Button} from "@/components/ui/button";
+import { useGlobalContext } from "@/context/GlobalContext";
 import {listenNowAlbums} from "@/lib/data";
 import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import {Heart, Share, Shuffle} from "lucide-react";
 import localFont from "next/font/local";
 import {useRouter} from "next/router";
+import { use } from "react";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,11 +21,37 @@ const geistMono = localFont({
 
 export default function Feed() {
   const router = useRouter();
+
+  const {createPost} = useGlobalContext();
+
+
+
   return (
     <div
       className={`h-full w-full bg-white text-black dark:bg-black dark:text-white`}
     >
       <Navbar />
+      <div className="w-full h-20">
+
+        <div className="w-full h-full flex items-center justify-center">
+          <Button
+            onClick={() =>{
+    //           imageUrl: string,
+    // description: string,
+    // canvasSize: string
+              const imageUrl = "bafybeicdhuxbqsn4dp3wgxptoi54kqe2pb6u7epbdxs2rzdu4pxktjlwuy";
+              const description = "This is a test description";
+              const canvasSize = "400x400";
+    
+              createPost(imageUrl, description, canvasSize);
+            
+            }}
+            className="w-40 h-10 rounded-full border border-slate-800 focus-visible:ring-0"
+          >
+            Create Post
+          </Button>
+        </div>
+      </div>
       <div
         className={`w-full h-full ${geistSans.className} flex justify-center`}
       >
