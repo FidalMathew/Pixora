@@ -1,5 +1,5 @@
 import {usePrivy, useWallets} from "@privy-io/react-auth";
-import {CircleUserRound} from "lucide-react";
+import {CircleUserRound, Plus} from "lucide-react";
 import {Button} from "./ui/button";
 import {useEffect} from "react";
 import {useRouter} from "next/router";
@@ -26,6 +26,10 @@ export default function Navbar() {
           alt="user"
           className="h-8 w-8 border rounded-full border-gray-700 cursor-pointer"
         />
+        {/* {router.pathname === "/feed" && (
+          <Button onClick={() => router.push("/artistprofile")}>Create</Button>
+        )} */}
+
         {authenticated && (
           <Button onClick={logout} variant={"outline"}>
             Logout

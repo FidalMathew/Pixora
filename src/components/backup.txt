@@ -137,3 +137,140 @@ function LoginPage() {
 }
 //
 export default LoginPage;
+
+
+
+   <Form className="p-6 w-fit flex flex-col gap-5">
+            <p className="text-3xl font-semibold text-center">Add Posts</p>
+            <div className="flex gap-5">
+              <div className="flex flex-col gap-6 w-[400px]">
+                <div className="flex justify-start gap-3 flex-col">
+                  <Label htmlFor="description">Image Description</Label>
+                  <Field
+                    as={Textarea}
+                    name="description"
+                    placeholder="Description"
+                    rows="5"
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Canvas Size Select */}
+                <div className="flex justify-start gap-3 flex-col">
+                  <Label htmlFor="canvasSize">Canvas</Label>
+                  <Select onValueChange={setCanvasSize}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Canvas Size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1080x1080">
+                        Instagram Post (Square) 1080px 1080px
+                      </SelectItem>
+                      <SelectItem value="1080x1350">
+                        Instagram Post (Portrait) 1080px 1350px
+                      </SelectItem>
+                      <SelectItem value="1080x566">
+                        Instagram Post (Landscape) 1080px 566px
+                      </SelectItem>
+                      <SelectItem value="1080x1920">
+                        Instagram Story 1080px 1920px
+                      </SelectItem>
+                      <SelectItem value="1200x630">
+                        Facebook Post 1200px 630px
+                      </SelectItem>
+                      <SelectItem value="820x312">
+                        Facebook Cover Photo 820px 312px
+                      </SelectItem>
+                      <SelectItem value="1920x1005">
+                        Facebook Event Cover 1920px 1005px
+                      </SelectItem>
+                      <SelectItem value="1024x512">
+                        Twitter Post 1024px 512px
+                      </SelectItem>
+                      <SelectItem value="1500x500">
+                        Twitter Header 1500px 500px
+                      </SelectItem>
+                      <SelectItem value="1200x627">
+                        LinkedIn Post 1200px 627px
+                      </SelectItem>
+                      <SelectItem value="1584x396">
+                        LinkedIn Cover Photo 1584px 396px
+                      </SelectItem>
+                      <SelectItem value="1000x1500">
+                        Pinterest Pin 1000px 1500px
+                      </SelectItem>
+                      <SelectItem value="1280x720">
+                        YouTube Thumbnail 1280px 720px
+                      </SelectItem>
+                      <SelectItem value="2560x1440">
+                        YouTube Channel Art 2560px 1440px
+                      </SelectItem>
+                      <SelectItem value="728x90">
+                        Leaderboard Ad 728px 90px
+                      </SelectItem>
+                      <SelectItem value="300x250">
+                        Medium Rectangle Ad 300px 250px
+                      </SelectItem>
+                      <SelectItem value="160x600">
+                        Wide Skyscraper Ad 160px 600px
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-5">
+                {/* Image Upload with Preview */}
+                <div className="flex justify-start gap-3 flex-col">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="uploadedImageUrl">Upload</Label>
+                    <Button size="sm" variant="outline">
+                      Upload to IPFS
+                    </Button>
+                  </div>
+                </div>
+                {imageUrl ? (
+                  <div className="w-full border-2 rounded">
+                    {/* Get the selected canvas dimensions */}
+                    <img
+                      src={imageUrl}
+                      alt="preview"
+                      className="object-contain m-auto"
+                      style={{
+                        width: "100%", // Make the image responsive
+                        maxWidth: `${
+                          getCanvasDimensions(canvasSize).width / 2
+                        }px`, // Scale down to fit the form
+                        maxHeight: `${
+                          getCanvasDimensions(canvasSize).height / 2
+                        }px`, // Maintain aspect ratio
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <Dropzone onDrop={handleDrop}>
+                    {({getRootProps, getInputProps}) => (
+                      <div className="w-full h-[200px] border-2 rounded border-dotted">
+                        <div
+                          {...getRootProps()}
+                          className="h-full w-full flex justify-center items-center"
+                        >
+                          <input {...getInputProps()} />
+                          <p>
+                            Drag 'n' drop some files here, or click to select
+                            files
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </Dropzone>
+                )}
+              </div>
+
+              {/* Submit Button */}
+            </div>
+            <Button type="submit" className="w-full">
+              Post
+            </Button>
+            {/* Description Field */}
+          </Form>

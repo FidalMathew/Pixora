@@ -1,8 +1,8 @@
-import { iliad } from "@/lib/chains";
-import { EIP1193Provider, usePrivy, useWallets } from "@privy-io/react-auth";
-import { useRouter } from "next/router";
-import { createContext, useEffect, useState } from "react";
-import { ReactNode, useContext } from "react";
+import {iliad} from "@/lib/chains";
+import {EIP1193Provider, usePrivy, useWallets} from "@privy-io/react-auth";
+import {useRouter} from "next/router";
+import {createContext, useEffect, useState} from "react";
+import {ReactNode, useContext} from "react";
 import {
   createPublicClient,
   createWalletClient,
@@ -11,10 +11,21 @@ import {
   PublicClient,
   WalletClient,
 } from "viem";
-import { baseSepolia } from "viem/chains";
+import {baseSepolia} from "viem/chains";
 import PIXORA_ABI from "@/utils/abi.json";
+import {createPortal} from "react-dom";
 
-const GlobalContext = createContext({});
+const GlobalContext = createContext({
+  createPost: (imageUrl: string, description: string, canvasSize: string) => {},
+  createPostLoading: false,
+  createRemix: (postId: number, remixImageUrl: string) => {},
+  createRemixLoading: false,
+  getPostDetails: (postId: number) => {},
+  getRemixDetails: (remixId: number) => {},
+  loggedInAddress: "" as string | undefined,
+  publicClient: undefined as PublicClient | undefined,
+  walletClient: undefined as WalletClient | undefined,
+});
 
 export default function GlobalContextProvider({
   children,
@@ -25,8 +36,8 @@ export default function GlobalContextProvider({
   const [walletClient, setWalletClient] = useState<WalletClient>();
   const [publicClient, setPublicClient] = useState<PublicClient>();
   const router = useRouter();
-  const { ready, authenticated } = usePrivy();
-  const { wallets } = useWallets();
+  const {ready, authenticated} = usePrivy();
+  const {wallets} = useWallets();
 
   const CONTRACT_ADDRESS = "0x91cF36c6391071d9Be70a9863BBC67E706217282";
   // const PIXORA_ABI: never[] = []
@@ -62,7 +73,6 @@ export default function GlobalContextProvider({
   useEffect(() => {
     (async function () {
       try {
-
         console.log(walletClient, publicClient, "walletClient, publicClient");
 
         if (walletClient && publicClient) {
@@ -83,7 +93,6 @@ export default function GlobalContextProvider({
     })();
   }, [walletClient, publicClient, provider, ready, wallets, router]);
 
-
   const getPostDetails = async (postId: number) => {
     try {
       if (publicClient) {
@@ -93,7 +102,7 @@ export default function GlobalContextProvider({
           functionName: "getPost",
           args: [postId],
         });
-  
+
         // setPostExists(data !== undefined);
         console.log(data, "Post Details");
         return data;
@@ -103,7 +112,6 @@ export default function GlobalContextProvider({
     }
   };
 
-  
   const getRemixDetails = async (remixId: number) => {
     try {
       if (publicClient) {
@@ -113,8 +121,7 @@ export default function GlobalContextProvider({
           functionName: "getRemix",
           args: [remixId],
         });
-  
-  
+
         console.log(data, "Remix Details");
         return data;
       }
@@ -142,7 +149,7 @@ export default function GlobalContextProvider({
           chain: baseSepolia,
         });
 
-        await publicClient.waitForTransactionReceipt({ hash: tx });
+        await publicClient.waitForTransactionReceipt({hash: tx});
         console.log("Post successfully created");
       }
     } catch (error) {
@@ -167,7 +174,7 @@ export default function GlobalContextProvider({
           chain: baseSepolia,
         });
 
-        await publicClient.waitForTransactionReceipt({ hash: tx });
+        await publicClient.waitForTransactionReceipt({hash: tx});
         console.log("Remix successfully created");
       }
     } catch (error) {
