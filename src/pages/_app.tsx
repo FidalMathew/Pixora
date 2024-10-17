@@ -6,6 +6,7 @@ import {PrivyProvider} from "@privy-io/react-auth";
 import GlobalContextProvider from "@/context/GlobalContext";
 import {iliad} from "@/lib/chains";
 import {avalancheFuji, baseSepolia, sepolia} from "viem/chains";
+import {Toaster} from "sonner";
 // import {} from "@story-protocol/react-sdk";
 export default function App({
   Component,
@@ -41,6 +42,7 @@ export default function App({
           disableTransitionOnChange
         >
           <Component {...pageProps} />
+          <Toaster />
         </Provider>
       </GlobalContextProvider>
     </PrivyProvider>
