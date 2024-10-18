@@ -18,7 +18,9 @@ export default function Navbar() {
   }, [authenticated, ready]);
   return (
     <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
-      <div>Pixora</div>
+      <div onClick={() => router.push("/feed")} className="cursor-pointer">
+        Pixora
+      </div>
       <div className="flex items-center gap-3">
         <img
           src={"/user.png"}
@@ -31,8 +33,21 @@ export default function Navbar() {
         )} */}
 
         {authenticated && (
-          <Button onClick={logout} variant={"outline"}>
+          <Button
+            onClick={logout}
+            variant={"outline"}
+            className="border-2 border-slate-700"
+          >
             Logout
+          </Button>
+        )}
+        {authenticated && (
+          <Button
+            onClick={() => router.push("/addPost")}
+            variant={"outline"}
+            className="border-2 border-slate-700"
+          >
+            Create Post
           </Button>
         )}
       </div>

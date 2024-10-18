@@ -4,16 +4,18 @@ import {useRouter} from "next/router";
 import {createContext, useEffect, useState} from "react";
 import {ReactNode, useContext} from "react";
 import {
+  Address,
   createPublicClient,
   createWalletClient,
   custom,
   getContract,
   PublicClient,
+  toHex,
   WalletClient,
 } from "viem";
 import {baseSepolia} from "viem/chains";
 import PIXORA_ABI from "@/utils/abi.json";
-import {createPortal} from "react-dom";
+import {useIpAsset, useNftClient, PIL_TYPE} from "@story-protocol/react-sdk";
 
 const GlobalContext = createContext({
   createPost: (imageUrl: string, description: string, canvasSize: string) => {},
@@ -25,6 +27,7 @@ const GlobalContext = createContext({
   loggedInAddress: "" as string | undefined,
   publicClient: undefined as PublicClient | undefined,
   walletClient: undefined as WalletClient | undefined,
+  CONTRACT_ADDRESS: "",
 });
 
 export default function GlobalContextProvider({
@@ -196,6 +199,7 @@ export default function GlobalContextProvider({
         createPostLoading,
         createRemix,
         createRemixLoading,
+        CONTRACT_ADDRESS,
       }}
     >
       {children}

@@ -7,6 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { prompt } = req.body;
 
+
   const height = req.body.height || 512;
   const width = req.body.width || 512
 
@@ -25,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       model_id: 'stabilityai/stable-diffusion-3-medium-diffusers', // Static model ID
       prompt, // Use dynamic prompt from request body
       height,
-        width,
+      width,
     }),
   };
 

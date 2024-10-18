@@ -7,7 +7,8 @@ import Moveable from "react-moveable";
 import Selecto from "react-selecto";
 import {Formik, Field, Form} from "formik";
 import {Slider} from "@/components/ui/slider";
-
+import axios from "axios";
+import {ReloadIcon} from "@radix-ui/react-icons";
 export default function EditingPage() {
   const [target, setTarget] = useState<HTMLElement | null>(null); // Current moveable target
   const [showBorders, setShowBorders] = useState(false); // Control border visibility
@@ -104,6 +105,28 @@ export default function EditingPage() {
   sepia(${sepia.object}%)`;
 
   console.log(target, "target");
+
+  const [background, setBackground] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const generateBackground = async (prompt: string) => {
+    setAiLoading(true);
+    try {
+      console.log(prompt, "prompt");
+      const res = await axios.post("/api/generateImage", {
+        prompt,
+        height: 1024,
+        width: 1024,
+      });
+      // setBackground(res);
+      console.log(res.data.images[0].url, "res");
+
+      setBackground(res.data.images[0].url);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
   return (
     <div className="h-screen w-full bg-white text-black dark:bg-black dark:text-white">
       <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
@@ -134,7 +157,7 @@ export default function EditingPage() {
             >
               {/* Background image */}
               <img
-                src="/background.png" // Use the correct path to the public folder image
+                src={background || "/background.png"} // Use the correct path to the public folder image
                 alt="background"
                 className="absolute top-0 left-0 w-full h-full object-cover"
                 style={{filter: filterStyleBackground}}
@@ -237,20 +260,31 @@ export default function EditingPage() {
           </div>
         </div>
         <div className="flex h-full w-[300px] rounded-xl border flex-col p-4 justify-start gap-4">
-          <Formik initialValues={{aiprompt: ""}} onSubmit={() => {}}>
+          <Formik
+            initialValues={{aiprompt: ""}}
+            onSubmit={(values, _) => generateBackground(values.aiprompt)}
+          >
             {(formik) => (
               <Form>
                 <div className="flex flex-col gap-3 justify-start">
                   <Label htmlFor="aiprompt" className="">
                     Generate New Background
                   </Label>
-                  <Textarea
+                  <Field
+                    as={Textarea}
                     name="aiprompt"
                     id="aiprompt"
                     placeholder="Give your AI Prompt Here"
                     className="w-full h-[140px]"
                   />
-                  <Button type="submit">Generate</Button>
+                  {aiLoading ? (
+                    <Button variant="outline" className="w-full" disabled>
+                      <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                      Please wait
+                    </Button>
+                  ) : (
+                    <Button type="submit">Generate</Button>
+                  )}
                 </div>
               </Form>
             )}
