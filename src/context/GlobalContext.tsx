@@ -1,4 +1,3 @@
-import {iliad} from "@/lib/chains";
 import {EIP1193Provider, usePrivy, useWallets} from "@privy-io/react-auth";
 import {useRouter} from "next/router";
 import {createContext, useEffect, useState} from "react";
@@ -9,13 +8,15 @@ import {
   createWalletClient,
   custom,
   getContract,
+  Hex,
   PublicClient,
   toHex,
   WalletClient,
 } from "viem";
 import {baseSepolia} from "viem/chains";
 import PIXORA_ABI from "@/utils/abi.json";
-import {useIpAsset, useNftClient, PIL_TYPE} from "@story-protocol/react-sdk";
+import {iliad, StoryClient, StoryConfig} from "@story-protocol/core-sdk";
+import {iliadNftAbi} from "@/utils/iliadNftAbi";
 
 const GlobalContext = createContext({
   createPost: (imageUrl: string, description: string, canvasSize: string) => {},
@@ -28,6 +29,9 @@ const GlobalContext = createContext({
   publicClient: undefined as PublicClient | undefined,
   walletClient: undefined as WalletClient | undefined,
   CONTRACT_ADDRESS: "",
+  nftMinttoStory: (to: Address, uri: string) => Promise.resolve(""),
+  storyClient: null as StoryClient | null,
+  provider: undefined as EIP1193Provider | undefined,
 });
 
 export default function GlobalContextProvider({
@@ -44,6 +48,18 @@ export default function GlobalContextProvider({
 
   const CONTRACT_ADDRESS = "0x91cF36c6391071d9Be70a9863BBC67E706217282";
   // const PIXORA_ABI: never[] = []
+  const [storyClient, setStoryClient] = useState<StoryClient | null>(null);
+
+  const setupStoryClient: () => StoryClient | undefined = () => {
+    if (!wallets[0] || !provider) return;
+    const config: StoryConfig = {
+      account: wallets[0].address as Hex,
+      transport: custom(provider),
+      chainId: "iliad",
+    };
+    const client = StoryClient.newClient(config);
+    return client;
+  };
 
   useEffect(() => {
     (async function () {
@@ -72,6 +88,45 @@ export default function GlobalContextProvider({
   }, [ready, authenticated, wallets]);
 
   const [loggedInAddress, setLoggedInAddress] = useState<string>();
+
+  useEffect(() => {
+    if (!storyClient && wallets[0]) {
+      let newClient = setupStoryClient();
+      if (newClient) {
+        setStoryClient(newClient);
+      }
+    }
+  }, [wallets, provider]);
+
+  const nftMinttoStory = async (to: Address, uri: string): Promise<string> => {
+    if (!wallets[0] || !provider) return "";
+    console.log("Minting a new NFT...");
+    const walletClient = createWalletClient({
+      account: wallets[0].address as Address,
+      chain: iliad,
+      transport: custom(provider),
+    });
+    const publicClient = createPublicClient({
+      transport: custom(provider),
+      chain: iliad,
+    });
+
+    const {request} = await publicClient.simulateContract({
+      address: "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
+      functionName: "mintNFT",
+      args: [to, uri],
+      abi: iliadNftAbi,
+    });
+
+    const hash = await walletClient.writeContract(request);
+    console.log(`Minted NFT successful with hash: ${hash}`);
+
+    const receipt = await publicClient.waitForTransactionReceipt({hash});
+    const tokenId = Number(receipt.logs[0].topics[3]).toString();
+    console.log(`Minted NFT tokenId: ${tokenId}`);
+
+    return tokenId; // Ensure you return a Promise<string>
+  };
 
   useEffect(() => {
     (async function () {
@@ -200,6 +255,9 @@ export default function GlobalContextProvider({
         createRemix,
         createRemixLoading,
         CONTRACT_ADDRESS,
+        storyClient,
+        nftMinttoStory,
+        provider,
       }}
     >
       {children}

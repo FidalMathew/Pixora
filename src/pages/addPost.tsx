@@ -29,8 +29,17 @@ import {useGlobalContext} from "@/context/GlobalContext";
 import PIXORA_ABI from "@/utils/abi.json";
 import {baseSepolia} from "viem/chains";
 import {useWallets} from "@privy-io/react-auth";
-import {Hex} from "viem";
+import {
+  Address,
+  createPublicClient,
+  createWalletClient,
+  custom,
+  Hex,
+} from "viem";
 import NFTMintABI from "@/utils/mintnft.json";
+import {iliad, LicenseClient} from "@story-protocol/core-sdk";
+import CryptoJS from "crypto-js";
+import {iliadNftAbi} from "@/utils/iliadNftAbi";
 
 export default function AddPost() {
   const getCanvasDimensions = (canvasSize: string) => {
@@ -40,14 +49,21 @@ export default function AddPost() {
   };
 
   const [canvasSize, setCanvasSize] = useState<string>("1080x1080");
-  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState<boolean>(false);
   const [uploading, setUploading] = useState(false);
   const [ipfsUrl, setIpfsUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const {wallets} = useWallets();
 
-  const {publicClient, walletClient, CONTRACT_ADDRESS} = useGlobalContext();
+  const {
+    publicClient,
+    walletClient,
+    CONTRACT_ADDRESS,
+    storyClient,
+    nftMinttoStory,
+    provider,
+  } = useGlobalContext();
 
   // there are 3 states, uploading to ipfs, add post to blockchain, and mint nft for that, make useStates to handle loading, errors and successful msg for each state
   const [executionState, setExecutionState] = useState<{
@@ -102,28 +118,20 @@ export default function AddPost() {
     };
   };
 
-  const uploadFile = async () => {
-    if (!file) {
-      // alert("No file selected");
-      toast.error("No file selected");
-      return;
-    }
+  const uploadFile = async (file: File, description: string) => {
+    const keyRequest = await fetch("/api/upload");
+    const keyData = await keyRequest.json();
+    const upload = await pinata.upload.file(file).key(keyData.JWT);
+    const json = {
+      name: file.name,
+      description: description,
+      image: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
+    };
 
-    try {
-      setUploading(true);
-      const keyRequest = await fetch("/api/upload");
-      const keyData = await keyRequest.json();
-      const upload = await pinata.upload.file(file).key(keyData.JWT);
-      console.log(upload);
-      setIpfsUrl(upload.IpfsHash);
-      setUploading(false);
-    } catch (e) {
-      console.log(e);
-      setUploading(false);
-      alert("Trouble uploading file");
-    } finally {
-      setUploading(false);
-    }
+    return {
+      ipfsUri: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
+      ipfsJson: json,
+    };
   };
 
   const addPostToBlockchain = async (
@@ -146,28 +154,6 @@ export default function AddPost() {
       console.log("Post successfully created");
     } catch (error) {
       console.error("Error adding post to blockchain:", error);
-    }
-  };
-
-  //
-
-  const mintNFT = async () => {
-    if (!publicClient || !walletClient || !wallets[0]) return;
-    try {
-      const tx = await walletClient.writeContract({
-        address: "0x314b192Ea659D9e34608666b5Fab9A7ec8F7878b" as Hex,
-        abi: NFTMintABI,
-        functionName: "mintPost",
-        account: wallets[0].address as `0x${string}`, // Ensure loggedInAddress is properly set
-        args: [],
-        chain: baseSepolia,
-      });
-
-      await publicClient.waitForTransactionReceipt({hash: tx});
-
-      console.log("NFT successfully minted");
-    } catch (error) {
-      console.error("Error minting NFT:", error);
     }
   };
 
@@ -290,10 +276,436 @@ export default function AddPost() {
     }
   };
 
+  // story protocol functionalities
+
+  const registerExistingNFT = async (
+    tokenId: string,
+    nftContract: Address,
+    ipfsUri: string | null,
+    ipfsJson: any | null
+  ) => {
+    if (!storyClient) {
+      toast.error("Story client not initialized");
+      return;
+    }
+
+    // Hash the string using SHA-256 and convert the result to hex
+    const metadataHash = CryptoJS.SHA256(
+      JSON.stringify(ipfsJson || {})
+    ).toString(CryptoJS.enc.Hex);
+    const response = await storyClient.ipAsset.register({
+      nftContract,
+      tokenId,
+      ipMetadata: {
+        ipMetadataURI: ipfsUri || "test-ip-metadata-uri", // uri of IP metadata
+        ipMetadataHash: `0x${metadataHash}`, // hash of IP metadata
+        nftMetadataURI: ipfsUri || "test-nft-metadata-uri", // uri of NFT metadata
+        nftMetadataHash: `0x${metadataHash}`, // hash of NFT metadata
+      },
+      txOptions: {waitForTransaction: true},
+    });
+    console.log(
+      `Root IPA created at tx hash ${response.txHash}, IPA ID: ${response.ipId}`
+    );
+  };
+
+  const mintAndRegisterNFT = async (file: File, description: string) => {
+    if (!storyClient || !file) return;
+    try {
+      await wallets[0].switchChain(iliad.id);
+      setUploading(true);
+      const {ipfsUri, ipfsJson} = await uploadFile(file, description);
+
+      const tokenId = await nftMinttoStory(
+        wallets[0].address as Address,
+        ipfsUri
+      );
+      registerExistingNFT(
+        tokenId,
+        "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
+        ipfsUri,
+        ipfsJson
+      );
+    } catch (err: any) {
+      console.log(err);
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // there are 4 states, upload to ipfs, mint nft to story, register nft as ip, attach term to ip, mint a license token, usestate for item
+  const [executionIpState, setExecutionIpState] = useState<{
+    uploadingIpToIPFS: boolean;
+    ipfsIpError: string | null;
+    ipfsIpSuccess: string | null;
+
+    mintNFTokenLoading: boolean;
+    mintNFTokenError: string | null;
+    mintNFTokenSuccess: string | null;
+
+    registerNftAsIpLoading: boolean;
+    registerNftAsIpError: string | null;
+    registerNftAsIpSuccess: string | null;
+
+    attachTermToIpLoading: boolean;
+    attachTermToIpError: string | null;
+    attachTermToIpSuccess: string | null;
+  }>({
+    uploadingIpToIPFS: false,
+    ipfsIpError: null,
+    ipfsIpSuccess: null,
+
+    mintNFTokenLoading: false,
+    mintNFTokenError: null,
+    mintNFTokenSuccess: null,
+
+    registerNftAsIpLoading: false,
+    registerNftAsIpError: null,
+    registerNftAsIpSuccess: null,
+
+    attachTermToIpLoading: false,
+    attachTermToIpError: null,
+    attachTermToIpSuccess: null,
+  });
+
+  const [ipfsUri, setIpfsUri] = useState<string | null>(null);
+  const [ipfsJson, setIpfsJson] = useState<any | null>(null);
+  // const [mintedNftStoryTokenId, setMintedNftStoryTokenId] = useState<
+  //   string | null
+  // >(null);
+
+  // const [ipId, setIpId] = useState<Hex | undefined>();
+
+  const handleStoryProtocolFunctionalities = async (
+    file: File,
+    description: string
+  ) => {
+    console.log(storyClient, provider, file, "storyClient, provider, file");
+
+    if (!storyClient || !file || !provider) return;
+
+    console.log("Executing Story Protocol functionalities...");
+    // step 1: upload to ipfs
+
+    try {
+      await wallets[0].switchChain(iliad.id);
+      setExecutionIpState((prevState) => ({
+        ...prevState,
+        uploadingIpToIPFS: true,
+        ipfsIpError: null,
+        ipfsIpSuccess: null,
+      }));
+
+      console.log("Uploading to IPFS...");
+
+      const {ipfsUri, ipfsJson} = await uploadFile(file, description);
+
+      setIpfsJson(ipfsJson);
+      setIpfsUri(ipfsUri);
+
+      setExecutionIpState((prevState) => ({
+        ...prevState,
+        uploadingIpToIPFS: false,
+        ipfsIpSuccess: ipfsUri,
+      }));
+
+      try {
+        setExecutionIpState((prevState) => ({
+          ...prevState,
+          mintNFTokenLoading: true,
+          mintNFTokenError: null,
+          mintNFTokenSuccess: null,
+        }));
+
+        console.log("Minting NFT...");
+
+        console.log(ipfsUri, "ipfsUri", ipfsJson, "ipfsJson");
+
+        const walletClient = createWalletClient({
+          account: wallets[0].address as Address,
+          chain: iliad,
+          transport: custom(provider),
+        });
+        const publicClient = createPublicClient({
+          transport: custom(provider),
+          chain: iliad,
+        });
+
+        const {request} = await publicClient.simulateContract({
+          address: "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
+          functionName: "mintNFT",
+          args: [wallets[0].address as Address, ipfsUri],
+          abi: iliadNftAbi,
+        });
+
+        const hash = await walletClient.writeContract(request);
+        console.log(`Minted NFT successful with hash: ${hash}`);
+
+        const receipt = await publicClient.waitForTransactionReceipt({hash});
+        const tokenId = Number(receipt.logs[0].topics[3]).toString();
+        console.log(`Minted NFT tokenId: ${tokenId}`);
+
+        setExecutionIpState((prevState) => ({
+          ...prevState,
+          mintNFTokenLoading: false,
+          mintNFTokenSuccess: tokenId,
+        }));
+
+        // Step 3: Register NFT as IP
+        try {
+          setExecutionIpState((prevState) => ({
+            ...prevState,
+            registerNftAsIpLoading: true,
+            registerNftAsIpError: null,
+            registerNftAsIpSuccess: null,
+          }));
+
+          console.log("Registering NFT as IP...");
+
+          console.log(
+            ipfsUri,
+            ipfsJson,
+            tokenId,
+            "ipfsJson, mintedNftStoryTokenId"
+          );
+          // Hash the string using SHA-256 and convert the result to hex
+
+          const metadataHash = CryptoJS.SHA256(
+            JSON.stringify(ipfsJson)
+          ).toString(CryptoJS.enc.Hex);
+
+          //  tokenId,
+          // "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
+          // ipfsUri,
+          // ipfsJson
+          const response1 = await storyClient.ipAsset.register({
+            nftContract:
+              "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485" as Address,
+            tokenId: tokenId as string,
+            ipMetadata: {
+              ipMetadataURI: ipfsUri || "test-ip-metadata-uri", // uri of IP metadata
+              ipMetadataHash: `0x${metadataHash}`, // hash of IP metadata
+              nftMetadataURI: ipfsUri || "test-nft-metadata-uri", // uri of NFT metadata
+              nftMetadataHash: `0x${metadataHash}`, // hash of NFT metadata
+            },
+            txOptions: {waitForTransaction: true},
+          });
+
+          setExecutionIpState((prevState) => ({
+            ...prevState,
+            registerNftAsIpLoading: false,
+            registerNftAsIpSuccess: response1.ipId!,
+          }));
+
+          try {
+            setExecutionIpState((prevState) => ({
+              ...prevState,
+              attachTermToIpLoading: true,
+              attachTermToIpError: null,
+              attachTermToIpSuccess: null,
+            }));
+
+            console.log("Attaching term to IP...");
+
+            const response = await storyClient.license.attachLicenseTerms({
+              licenseTermsId: 2,
+              ipId: response1.ipId as Address,
+              txOptions: {waitForTransaction: true},
+            });
+            setExecutionIpState((prevState) => ({
+              ...prevState,
+              attachTermToIpLoading: false,
+              attachTermToIpSuccess: response.txHash!,
+            }));
+          } catch (error: any) {
+            console.log(error);
+            toast.error(error.message);
+            setExecutionIpState((prevState) => ({
+              ...prevState,
+              attachTermToIpLoading: false,
+              attachTermToIpError: "Error attaching term to IP",
+            }));
+            return;
+          }
+        } catch (err: any) {
+          console.log(err);
+          toast.error(err.message);
+          setExecutionIpState((prevState) => ({
+            ...prevState,
+            registerNftAsIpLoading: false,
+            registerNftAsIpError: "Error registering NFT as IP",
+          }));
+          return;
+        }
+      } catch (error: any) {
+        console.log(error);
+        toast.error(error.message);
+        setExecutionIpState((prevState) => ({
+          ...prevState,
+          mintNFTokenLoading: false,
+          mintNFTokenError: "Error minting NFT",
+        }));
+        return;
+      }
+    } catch (e: any) {
+      console.log(e);
+      toast.error(e.message);
+      setExecutionIpState((prevState) => ({
+        ...prevState,
+        uploadingIpToIPFS: false,
+        ipfsIpError: "Trouble uploading file",
+      }));
+      return;
+    }
+
+    // Step 2: Mint NFT
+
+    // Step 3: Attach term to IP
+  };
+
   const [openStatus, setOpenStatus] = useState(false);
+  const [openIpStatusModal, setOpenIpStatusModal] = useState(false);
 
   return (
     <div className="  h-fit lg:h-screen w-full bg-white text-black ">
+      <Dialog open={openIpStatusModal} onOpenChange={setOpenIpStatusModal}>
+        <DialogContent
+          className="h-fit lg:w-[500px] bg-white text-black"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Story Protocol</DialogTitle>
+            <DialogDescription>
+              <div className="w-full h-full flex flex-col mt-5 font-sans text-black text-left">
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Upload to IPFS</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {executionIpState.ipfsIpSuccess && ipfsUri && (
+                        <a href={`${ipfsUri}`} target="_blank">
+                          {" "}
+                          {`${ipfsUri}`}
+                        </a>
+                      )}
+                      {executionIpState.ipfsIpError && (
+                        <p className="text-red-700">
+                          {executionIpState.ipfsIpError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionIpState.uploadingIpToIPFS ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionIpState.ipfsIpSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionIpState.ipfsIpError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Mint NFT on Iliad</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {/* https://explorer.story.foundation/ipa/0x5Ec29EA9fFfd4176f3E09B1Eb5c163adc8744c3D */}
+                      {executionIpState.mintNFTokenSuccess && (
+                        <a
+                          href={`https://explorer.story.foundation/ipa/${executionIpState.mintNFTokenSuccess}`}
+                          target="_blank"
+                        >
+                          {" "}
+                          {`https://explorer.story.foundation/ipa/${executionIpState.mintNFTokenSuccess}`}
+                        </a>
+                      )}
+                      {executionIpState.mintNFTokenError && (
+                        <p className="text-red-700">
+                          {executionIpState.mintNFTokenError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionIpState.mintNFTokenLoading ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionIpState.mintNFTokenSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionIpState.mintNFTokenError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Registering NFT as IP</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {/* https://explorer.story.foundation/ipa/0x5Ec29EA9fFfd4176f3E09B1Eb5c163adc8744c3D */}
+                      {executionIpState.registerNftAsIpSuccess && (
+                        <a
+                          href={`https://explorer.story.foundation/ipa/${executionIpState.registerNftAsIpSuccess}`}
+                          target="_blank"
+                        >
+                          {" "}
+                          {`https://explorer.story.foundation/ipa/${executionIpState.registerNftAsIpSuccess}`}
+                        </a>
+                      )}
+                      {executionIpState.registerNftAsIpError && (
+                        <p className="text-red-700">
+                          {executionIpState.registerNftAsIpError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionIpState.registerNftAsIpLoading ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionIpState.registerNftAsIpSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionIpState.registerNftAsIpError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Attach License Term to IP</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {executionIpState.attachTermToIpSuccess && (
+                        <a
+                          href={`https://explorer.story.foundation/transactions/${executionIpState.attachTermToIpSuccess}`}
+                          target="_blank"
+                        >
+                          {" "}
+                          {`https://explorer.story.foundation/transactions/${executionIpState.attachTermToIpSuccess}`}
+                        </a>
+                      )}
+                      {executionIpState.attachTermToIpError && (
+                        <p className="text-red-700">
+                          {executionIpState.attachTermToIpError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionIpState.attachTermToIpLoading ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionIpState.attachTermToIpSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionIpState.attachTermToIpError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={openStatus} onOpenChange={setOpenStatus}>
         <DialogContent className="h-fit lg:w-[500px] bg-white text-black">
           <DialogHeader>
@@ -397,7 +809,6 @@ export default function AddPost() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-
       <Navbar />
       <div
         className="flex justify-center items-center h-full"
@@ -512,15 +923,53 @@ export default function AddPost() {
                   // onClick={uploadFile}
                   onClick={() => {
                     setOpenStatus((prev) => !prev);
-                    handleMintPost(
-                      imageUrl,
-                      formik.values.description,
-                      formik.values.canvasSize
-                    );
+                    if (imageUrl) {
+                      handleMintPost(
+                        imageUrl,
+                        formik.values.description,
+                        formik.values.canvasSize
+                      );
+                    }
                   }}
                 >
                   Mint and Create Post
                 </Button>
+
+                <Button
+                  className="rounded-full"
+                  disabled={imageUrl === "" || ipfsUri !== null}
+                  onClick={() => {
+                    setOpenIpStatusModal((prev) => !prev);
+                    handleStoryProtocolFunctionalities(
+                      file as File,
+                      formik.values.description
+                    );
+                  }}
+                >
+                  Mint NFT to Story
+                </Button>
+
+                {/* {uploading && ipfsUrl === "" ? (
+                  <Button variant="outline" className="w-full" disabled>
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                    Please wait
+                  </Button>
+                ) : (
+                  <div className="flex justify-between items-center w-full">
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      onClick={() =>
+                        mintAndRegisterNFT(
+                          file as File,
+                          formik.values.description
+                        )
+                      }
+                    >
+                      Mint NFT to Story
+                    </Button>
+                  </div>
+                )} */}
               </div>
 
               <div className="h-full w-full">
@@ -534,7 +983,7 @@ export default function AddPost() {
                     >
                       <div
                         className="absolute -top-3 -right-3 cursor-pointer"
-                        onClick={() => setImageUrl("")}
+                        onClick={() => setImageUrl(null)}
                       >
                         <CircleX className="w-8 h-8 fill-black text-white cursor-pointer" />
                       </div>

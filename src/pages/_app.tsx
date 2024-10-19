@@ -34,15 +34,7 @@ export default function App({
           accentColor: "#676FFF",
           logo: "https://thegivingblock.com/wp-content/uploads/2021/08/Livepeer-LPT-logo.png",
         },
-        supportedChains: [
-          iliad,
-          baseSepolia,
-          sepolia,
-          avalancheFuji,
-          zoraSepolia,
-          zoraTestnet,
-          zora,
-        ],
+        supportedChains: [baseSepolia, sepolia],
         // embeddedWallets: {
         //   createOnLogin: "users-without-wallets",
         // },
