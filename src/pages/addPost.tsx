@@ -35,6 +35,7 @@ import {
   createWalletClient,
   custom,
   Hex,
+  toHex,
 } from "viem";
 import NFTMintABI from "@/utils/mintnft.json";
 import {iliad, LicenseClient} from "@story-protocol/core-sdk";
@@ -276,6 +277,9 @@ export default function AddPost() {
     }
   };
 
+  // Root IPA created at tx hash 0x39299d4497915a93abf930bdb650dbea155f472f43865229302868407dec20d4, IPA ID: 0x4862B5c1b0DF05F2A3eCc60b5637850Cd96C70D2
+  // License minted at tx hash 0xdd9e02643bb0097a4c64c18c439cfa22427efd895a508f92cc68a7e18c62972f, License IDs: 201035
+
   // story protocol functionalities
 
   const registerExistingNFT = async (
@@ -309,30 +313,30 @@ export default function AddPost() {
     );
   };
 
-  const mintAndRegisterNFT = async (file: File, description: string) => {
-    if (!storyClient || !file) return;
-    try {
-      await wallets[0].switchChain(iliad.id);
-      setUploading(true);
-      const {ipfsUri, ipfsJson} = await uploadFile(file, description);
+  // const mintAndRegisterNFT = async (file: File, description: string) => {
+  //   if (!storyClient || !file) return;
+  //   try {
+  //     await wallets[0].switchChain(iliad.id);
+  //     setUploading(true);
+  //     const {ipfsUri, ipfsJson} = await uploadFile(file, description);
 
-      const tokenId = await nftMinttoStory(
-        wallets[0].address as Address,
-        ipfsUri
-      );
-      registerExistingNFT(
-        tokenId,
-        "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
-        ipfsUri,
-        ipfsJson
-      );
-    } catch (err: any) {
-      console.log(err);
-      toast.error(err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
+  //     const tokenId = await nftMinttoStory(
+  //       wallets[0].address as Address,
+  //       ipfsUri
+  //     );
+  //     registerExistingNFT(
+  //       tokenId,
+  //       "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
+  //       ipfsUri,
+  //       ipfsJson
+  //     );
+  //   } catch (err: any) {
+  //     console.log(err);
+  //     toast.error(err.message);
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
 
   // there are 4 states, upload to ipfs, mint nft to story, register nft as ip, attach term to ip, mint a license token, usestate for item
   const [executionIpState, setExecutionIpState] = useState<{
@@ -422,34 +426,37 @@ export default function AddPost() {
 
         console.log(ipfsUri, "ipfsUri", ipfsJson, "ipfsJson");
 
-        const walletClient = createWalletClient({
+        const iliadWalletClient = createWalletClient({
           account: wallets[0].address as Address,
           chain: iliad,
           transport: custom(provider),
         });
-        const publicClient = createPublicClient({
+        const iliadPublicClient = createPublicClient({
           transport: custom(provider),
           chain: iliad,
         });
 
-        const {request} = await publicClient.simulateContract({
+        const {request} = await iliadPublicClient.simulateContract({
           address: "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
           functionName: "mintNFT",
           args: [wallets[0].address as Address, ipfsUri],
           abi: iliadNftAbi,
         });
 
-        const hash = await walletClient.writeContract(request);
+        const hash = await iliadWalletClient.writeContract(request);
         console.log(`Minted NFT successful with hash: ${hash}`);
 
-        const receipt = await publicClient.waitForTransactionReceipt({hash});
+        const receipt = await iliadPublicClient.waitForTransactionReceipt({
+          hash,
+        });
+        console.log(receipt, "nft receipt");
         const tokenId = Number(receipt.logs[0].topics[3]).toString();
         console.log(`Minted NFT tokenId: ${tokenId}`);
 
         setExecutionIpState((prevState) => ({
           ...prevState,
           mintNFTokenLoading: false,
-          mintNFTokenSuccess: tokenId,
+          mintNFTokenSuccess: hash,
         }));
 
         // Step 3: Register NFT as IP
@@ -558,17 +565,31 @@ export default function AddPost() {
       }));
       return;
     }
-
-    // Step 2: Mint NFT
-
-    // Step 3: Attach term to IP
   };
 
   const [openStatus, setOpenStatus] = useState(false);
   const [openIpStatusModal, setOpenIpStatusModal] = useState(false);
 
+  const makeDerivate = async () => {
+    if (!storyClient) return;
+    try {
+      const response = await storyClient.ipAsset.registerDerivative({
+        childIpId: "0xb5787a965763115c26F90691704Cfc6b2A341d32",
+        parentIpIds: ["0x70E9121441C2B6627EA5b6e26A5D58393f54e539"],
+        licenseTermsIds: ["2"],
+        txOptions: {waitForTransaction: true},
+      });
+    } catch (error: any) {
+      toast.error(error.message);
+      console.log(error);
+    }
+  };
+
+  // https://explorer.story.foundation/ipa/0x70E9121441C2B6627EA5b6e26A5D58393f54e539
+  // https://explorer.story.foundation/ipa/0xb5787a965763115c26F90691704Cfc6b2A341d32
+
   return (
-    <div className="  h-fit lg:h-screen w-full bg-white text-black ">
+    <div className="min-h-screen w-full bg-white text-black ">
       <Dialog open={openIpStatusModal} onOpenChange={setOpenIpStatusModal}>
         <DialogContent
           className="h-fit lg:w-[500px] bg-white text-black"
@@ -810,12 +831,7 @@ export default function AddPost() {
         </DialogContent>
       </Dialog>
       <Navbar />
-      <div
-        className="flex justify-center items-center h-full"
-        style={{
-          height: "calc(100vh - 70px)",
-        }}
-      >
+      <div className="h-full lg:h-[90vh] w-full">
         <Formik
           initialValues={{
             description: "",
@@ -827,8 +843,8 @@ export default function AddPost() {
           }}
         >
           {(formik) => (
-            <Form className="h-full w-full flex flex-col gap-4 p-10 lg:flex-row-reverse">
-              <div className="flex flex-col gap-6 w-full">
+            <Form className="h-full w-full flex flex-col gap-4 p-10 lg:flex-row-reverse justify-center items-center ">
+              <div className="flex flex-col gap-6 w-full h-full">
                 <p className="text-xl text-center font-semibold">Add Post</p>
                 <div className="flex justify-start gap-3 flex-col">
                   <Label htmlFor="description">Image Description</Label>
@@ -937,7 +953,7 @@ export default function AddPost() {
 
                 <Button
                   className="rounded-full"
-                  disabled={imageUrl === "" || ipfsUri !== null}
+                  disabled={imageUrl === ""}
                   onClick={() => {
                     setOpenIpStatusModal((prev) => !prev);
                     handleStoryProtocolFunctionalities(
@@ -948,7 +964,23 @@ export default function AddPost() {
                 >
                   Mint NFT to Story
                 </Button>
-
+                <Button
+                  className="rounded-full"
+                  onClick={() => {
+                    makeDerivate();
+                  }}
+                >
+                  Derivate
+                </Button>
+                {/* 
+                <Button
+                  className="w-full rounded-full"
+                  onClick={() =>
+                    mintAndRegisterNFT(file as File, formik.values.description)
+                  }
+                >
+                  Mint NFT
+                </Button> */}
                 {/* {uploading && ipfsUrl === "" ? (
                   <Button variant="outline" className="w-full" disabled>
                     <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
