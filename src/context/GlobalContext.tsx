@@ -49,7 +49,7 @@ const GlobalContext = createContext({
   ) => Promise.resolve(),
   getAllPosts: async () => {},
   getAllRemixes: async () => {},
-  getUserPosts: (userAddress: string) => Promise.resolve(),
+  getUserPosts: (userAddress: string) => Promise.resolve<any[]>([]),
   getRemixesByPostId: (postId: number) => Promise.resolve([]),
   allPosts: [] as any[],
   allRemixes: [] as any[],
@@ -315,7 +315,7 @@ export default function GlobalContextProvider({
     }
   }, [walletClient, publicClient, provider, ready, wallets, router]);
 
-  const getUserPosts = async (userAddress: string): Promise<void> => {
+  const getUserPosts = async (userAddress: string): Promise<any[]> => {
     try {
       if (publicClient) {
         const data = await publicClient.readContract({
@@ -326,10 +326,13 @@ export default function GlobalContextProvider({
         });
 
         console.log(data, `Posts by ${userAddress}`);
+
+        return data as any[];
       }
     } catch (error) {
       console.error("Error fetching user posts:", error);
     }
+    return [];
   };
 
   const getRemixesByPostId = async (postId: number): Promise<never[]> => {
