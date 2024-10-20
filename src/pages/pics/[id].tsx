@@ -4,10 +4,37 @@ import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {Heart, Share, Shuffle} from "lucide-react";
 import {useRouter} from "next/router";
+import {useGlobalContext} from "@/context/GlobalContext";
+import {useState, useEffect} from "react";
 
 export default function EachPicturePage() {
   const router = useRouter();
   console.log(router.query.id);
+
+  const {
+    getPostDetails,
+    walletClient,
+    publicClient,
+    provider,
+    loggedInAddress,
+    CONTRACT_ADDRESS,
+  } = useGlobalContext();
+
+  const [postInfo, setPostInfo] = useState<any>(null);
+
+  useEffect(() => {
+    (async function () {
+      if (provider && walletClient && publicClient) {
+        console.log(router.query.id, "router.query.id");
+        const val = await getPostDetails(parseInt(router.query.id as string));
+        console.log(val, "val");
+        if (val) {
+          setPostInfo(val);
+        }
+      }
+    })();
+  }, [provider, walletClient, publicClient, router]);
+
   return (
     <div
       className={`min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}

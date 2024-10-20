@@ -98,37 +98,37 @@ export default function Feed() {
                 key={index}
               >
                 <img
-                  src={item.cover}
+                  src={item.imageUrl}
                   alt="taylor"
-                  className="w-full object-cover cursor-pointer"
+                  className="w-full object-contain cursor-pointer"
                   onClick={() => router.push(`/pics/${index}`)}
                   style={{height: "calc((100% * 5 / 6) - 50px)"}}
                 />
                 <div className="h-[50px] flex items-center px-5 gap-2 text-sm font-light">
-                  <Avatar>
+                  {/* <Avatar>
                     <AvatarImage
                       src="/boy.png"
                       className="h-7 w-7 rounded-full"
                     />
                     <AvatarFallback>CN</AvatarFallback>
-                  </Avatar>
-                  <p className="">Jaydeep Dey</p>
+                  </Avatar> */}
+                  <p>By</p>
+                  <p className="">{item.owner}</p>
                 </div>
                 <div className="flex items-center justify-between px-4 h-1/6">
                   <Button
                     className="w-fit rounded-full border border-slate-800 focus-visible:ring-0"
                     variant={"outline"}
                   >
-                    <Shuffle className="mr-2 h-4 w-4" />
-                    Remix
+                    Remix of Post: #{Number(item.postId)}
                   </Button>
                   <div className="flex items-center">
-                    <div className="mr-2 h-10 w-10 p-2 hover:bg-gray-100 rounded-full cursor-pointer ">
+                    {/* <div className="mr-2 h-10 w-10 p-2 hover:bg-gray-100 rounded-full cursor-pointer ">
                       <Heart />
                     </div>
                     <div className="mr-2 h-10 w-10 p-2 hover:bg-gray-100 rounded-full cursor-pointer ">
                       <Share className="" />
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>

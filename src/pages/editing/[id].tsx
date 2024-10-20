@@ -12,12 +12,32 @@ import {ReloadIcon} from "@radix-ui/react-icons";
 import {useGlobalContext} from "@/context/GlobalContext";
 import {useRouter} from "next/router";
 import html2canvas from "html2canvas";
+import {pinata} from "@/utils/config";
+import {toast} from "sonner";
+import PIXORA_ABI from "@/utils/abi.json";
+import {Hex} from "viem";
+import {iliad} from "@story-protocol/core-sdk";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {CircleCheck, CircleX} from "lucide-react";
 
 export default function EditingPage() {
   const router = useRouter();
 
-  const {getPostDetails, walletClient, publicClient, provider} =
-    useGlobalContext();
+  const {
+    getPostDetails,
+    walletClient,
+    publicClient,
+    provider,
+    loggedInAddress,
+    CONTRACT_ADDRESS,
+  } = useGlobalContext();
 
   const [postInfo, setPostInfo] = useState<any>(null);
 
@@ -181,26 +201,264 @@ export default function EditingPage() {
 
   console.log(postInfo, "postInfo");
 
-  const saveCombinedImage = () => {
+  const saveCombinedImage = async (): Promise<File | null> => {
     const element = containerRef.current;
-    if (!element) return;
+    if (!element) return null;
 
-    html2canvas(element, {useCORS: true}).then((canvas) => {
-      const dataUrl = canvas.toDataURL("image/png");
+    const canvas = await html2canvas(element, {useCORS: true});
 
-      // Save to local storage (optional)
-      localStorage.setItem("combinedImage", dataUrl);
-
-      // Trigger download
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = "combined-image.png";
-      link.click();
+    // Convert canvas to Blob and then to File
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], "combined-image.png", {
+            type: "image/png",
+          });
+          resolve(file);
+        } else {
+          resolve(null);
+        }
+      }, "image/png");
     });
   };
 
+  const [ipfsUri, setIpfsUri] = useState<string | null>(null);
+  const [ipfsJson, setIpfsJson] = useState<any | null>(null);
+
+  const [executionState, setExecutionState] = useState<{
+    uploadingToIPFS: boolean;
+    ipfsError: string | null;
+    ipfsSuccess: string | null;
+
+    mintRemixLoading: boolean;
+    mintRemixError: string | null;
+    mintRemixSuccess: string | null;
+  }>({
+    uploadingToIPFS: false,
+    ipfsError: null,
+    ipfsSuccess: null,
+
+    mintRemixLoading: false,
+    mintRemixError: null,
+    mintRemixSuccess: null,
+  });
+
+  const uploadFile = async (file: File, description: string) => {
+    const keyRequest = await fetch("/api/upload");
+    const keyData = await keyRequest.json();
+    const upload = await pinata.upload.file(file).key(keyData.JWT);
+    const json = {
+      name: file.name,
+      description: description,
+      image: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
+    };
+
+    // await uploadJson(json);
+
+    return {
+      ipfsUri: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
+      ipfsJson: json,
+    };
+  };
+
+  const uploadJson = async (jsonData: {image: string; description: string}) => {
+    try {
+      // Step 1: Fetch JWT or authentication key
+      const keyRequest = await fetch("/api/upload"); // Endpoint to get your Pinata JWT
+      const keyData = await keyRequest.json();
+
+      // Step 2: Upload the JSON data to IPFS using Pinata
+      const jsonUpload = await pinata.upload.json(jsonData).key(keyData.JWT);
+
+      console.log(
+        jsonUpload,
+        "jsonUpload",
+        `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`
+      );
+
+      // Step 3: Return the IPFS URI of the uploaded JSON
+      // imageUrl: string, description: string, canvasSize: string, tokenURI: string
+      // createPost(
+      //   jsonData.image,
+      //   jsonData.description,
+      //   "1080x1080",
+      //   `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`
+      // );
+
+      return {
+        jsonIpfsUri: `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`, // JSON metadata IPFS link
+      };
+    } catch (error) {
+      console.error("Error uploading JSON to IPFS:", error);
+      // throw new Error("JSON upload failed");
+    }
+  };
+
+  const handleCreatingRemixAndMint = async () => {
+    if (!provider || !publicClient || !walletClient || !loggedInAddress) return;
+
+    try {
+      // Step 1: Upload to IPFS
+      setExecutionState((prevState) => ({
+        ...prevState,
+        uploadingToIPFS: true,
+      }));
+
+      console.log("Generating and uploading image to IPFS...");
+
+      const file = await saveCombinedImage();
+      if (!file) {
+        toast.error("Error generating combined image");
+        return;
+      }
+
+      console.log(file, "file to uploadddd");
+      // Upload image to IPFS
+      const {ipfsUri, ipfsJson} = await uploadFile(
+        file,
+        "Remix description here"
+      );
+      const tokenURI = await uploadJson(ipfsJson);
+
+      console.log("IPFS upload successful");
+      console.log(ipfsJson.image, "ipfs image");
+      console.log(ipfsUri, "ipfsUri");
+
+      setIpfsJson(ipfsJson);
+      setIpfsUri(ipfsUri);
+
+      setExecutionState((prevState) => ({
+        ...prevState,
+        uploadingToIPFS: false,
+        ipfsSuccess: ipfsUri,
+      }));
+
+      //   // Step 2: Mint Remix
+      try {
+        setExecutionState((prevState) => ({
+          ...prevState,
+          mintRemixLoading: true,
+        }));
+
+        console.log("Minting remix...");
+
+        const tx = await walletClient.writeContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "createRemix",
+          account: loggedInAddress as Hex,
+          args: [
+            router.query.id,
+            ipfsJson.image, // The image URL from IPFS
+            "hello",
+            "1080x1080",
+            tokenURI?.jsonIpfsUri,
+          ],
+          chain: iliad,
+        });
+
+        await publicClient.waitForTransactionReceipt({hash: tx});
+        console.log("Remix successfully created");
+
+        setExecutionState((prevState) => ({
+          ...prevState,
+          mintRemixLoading: false,
+          mintRemixSuccess: tx,
+        }));
+      } catch (error: any) {
+        console.error(error.message);
+        toast.error("Error creating remix");
+        setExecutionState((prevState) => ({
+          ...prevState,
+          mintRemixLoading: false,
+          mintRemixError: "Error creating remix",
+        }));
+        return;
+      }
+    } catch (error: any) {
+      console.error(error.message);
+      toast.error("Error uploading to IPFS");
+      setExecutionState((prevState) => ({
+        ...prevState,
+        uploadingToIPFS: false,
+        ipfsError: "Error uploading to IPFS",
+      }));
+      return;
+    }
+  };
+
+  const [openStatus, setOpenStatus] = useState(false);
+
   return (
     <div className="h-screen w-full bg-white text-black dark:bg-black dark:text-white">
+      <Dialog open={openStatus} onOpenChange={setOpenStatus}>
+        <DialogContent className="h-fit lg:w-[500px] bg-white text-black">
+          <DialogHeader>
+            <DialogTitle>Mint and Add Post</DialogTitle>
+            <DialogDescription>
+              <div className="w-full h-full flex flex-col mt-5 font-sans text-black text-left">
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Upload to IPFS</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {executionState.ipfsSuccess && ipfsUri && (
+                        <a href={`${ipfsJson.image}`} target="_blank">
+                          {" "}
+                          {`${ipfsJson.image}`}
+                        </a>
+                      )}
+                      {executionState.ipfsError && (
+                        <p className="text-red-700">
+                          {executionState.ipfsError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionState.uploadingToIPFS ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionState.ipfsSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionState.ipfsError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Mint NFT</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {executionState.mintRemixSuccess && (
+                        <a
+                          href={`https://sepolia.basescan.org/tx/${executionState.mintRemixSuccess}`}
+                          target="_blank"
+                        >
+                          {" "}
+                          {`https://sepolia.basescan.org/tx/${executionState.mintRemixSuccess}`}
+                        </a>
+                      )}
+                      {executionState.mintRemixError && (
+                        <p className="text-red-700">
+                          {executionState.mintRemixError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionState.mintRemixLoading ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionState.mintRemixSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionState.mintRemixError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
       <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
         <div>Pixora</div>
         <div className="flex items-center gap-3">
@@ -349,7 +607,7 @@ export default function EditingPage() {
                     name="aiprompt"
                     id="aiprompt"
                     placeholder="Give your AI Prompt Here"
-                    className="w-full h-[140px]"
+                    className="w-full h-[70px]"
                   />
                   {aiLoading ? (
                     <Button variant="outline" className="w-full" disabled>
@@ -372,6 +630,15 @@ export default function EditingPage() {
             // onClick={() => saveImage()}
           >
             Remove BG
+          </Button>
+          <Button
+            onClick={() => {
+              setOpenStatus(true);
+              handleCreatingRemixAndMint();
+            }}
+            // onClick={() => saveImage()}
+          >
+            Mint and Upload Remix
           </Button>
 
           {target === null ? (
