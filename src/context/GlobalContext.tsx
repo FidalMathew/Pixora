@@ -26,7 +26,7 @@ const GlobalContext = createContext({
   createPostLoading: false,
   createRemixLoading: false,
   getPostDetails: (postId: number) => Promise.resolve({}),
-  getRemixDetails: (remixId: number) => {},
+  getRemixDetails: (remixId: number) =>  Promise.resolve({}),
   loggedInAddress: "" as string | undefined,
   publicClient: undefined as PublicClient | undefined,
   walletClient: undefined as WalletClient | undefined,
@@ -50,7 +50,7 @@ const GlobalContext = createContext({
   getAllPosts: async () => {},
   getAllRemixes: async () => {},
   getUserPosts: (userAddress: string) => Promise.resolve(),
-  getRemixesByPostId: (postId: number) => Promise.resolve(),
+  getRemixesByPostId: (postId: number) => Promise.resolve([]),
   allPosts: [] as any[],
   allRemixes: [] as any[],
 });
@@ -266,7 +266,7 @@ export default function GlobalContextProvider({
         });
 
         console.log(data, "Remix Details");
-        return data;
+        return data as any;
       }
     } catch (error) {
       console.error("Error fetching remix details:", error);
@@ -332,7 +332,7 @@ export default function GlobalContextProvider({
     }
   };
 
-  const getRemixesByPostId = async (postId: number): Promise<void> => {
+  const getRemixesByPostId = async (postId: number): Promise<never[]> => {
     try {
       if (publicClient) {
         const data = await publicClient.readContract({
@@ -343,10 +343,12 @@ export default function GlobalContextProvider({
         });
 
         console.log(data, `Remixes for Post ID ${postId}`);
+        return data as never[];
       }
     } catch (error) {
       console.error("Error fetching remixes by post ID:", error);
     }
+    return [];
   };
 
   return (

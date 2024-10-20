@@ -5,7 +5,7 @@ import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {Heart, Share, Shuffle} from "lucide-react";
 import {useRouter} from "next/router";
 import {useGlobalContext} from "@/context/GlobalContext";
-import {useState, useEffect} from "react";
+import {useState, useEffect, Key} from "react";
 
 export default function EachPicturePage() {
   const router = useRouter();
@@ -18,9 +18,12 @@ export default function EachPicturePage() {
     provider,
     loggedInAddress,
     CONTRACT_ADDRESS,
+    getRemixesByPostId
   } = useGlobalContext();
 
   const [postInfo, setPostInfo] = useState<any>(null);
+  const [remixes, setRemixes] = useState<any>([]);
+
 
   useEffect(() => {
     (async function () {
@@ -31,9 +34,21 @@ export default function EachPicturePage() {
         if (val) {
           setPostInfo(val);
         }
+
+
+        const res = await getRemixesByPostId(parseInt(router.query.id as string));
+        console.log(res, "remixes");
+
+        if (Array.isArray(res)) {
+          setRemixes(res);
+        }
+
       }
     })();
   }, [provider, walletClient, publicClient, router]);
+
+
+
 
   return (
     <div
@@ -43,20 +58,20 @@ export default function EachPicturePage() {
       <div className="w-full h-fit flex justify-center items-center p-6">
         <div className="rounded-3xl bg-white border border-slate-800 h-fit lg:h-[650px] w-[900px] flex overflow-hidden flex-col lg:flex-row">
           <div className="w-full h-[600px] md:h-[400px] lg:w-3/5 lg:h-full flex items-center border-b lg:border-r lg:border-b-0 border-slate-800 overflow-hidden">
-            <img src={`/taylor.png`} alt="taylor" className="" />
+            <img src={postInfo?.imageUrl} alt="taylor" className="" />
           </div>
           <div className="lg:w-2/5 lg:h-full flex flex-col pt-5 gap-4">
             <div className="h-fit flex items-center px-5 gap-2 text-lg font-semibold">
               <Avatar>
                 <AvatarImage
-                  src="/taylor2.png"
+                  src={postInfo?.imageUrl}
                   className="h-14 w-14 rounded-full overflow-hidden object-cover"
                 />
                 <AvatarFallback>CN</AvatarFallback>
               </Avatar>
               <div className="flex flex-col justify-start gap-0">
-                <p className="text-sm font-normal">Artist</p>
-                <p className="text-lg font-semibold">Taylor Swift</p>
+                <p className="text-sm font-normal">Creator</p>
+                <p className="text-lg font-semibold">{postInfo?.owner.slice(0, 6)}...{postInfo?.owner.slice(-4)}</p>
               </div>
             </div>
             <div className="flex flex-col justify-start h-full w-full px-5 gap-4 mb-3">
@@ -70,24 +85,28 @@ export default function EachPicturePage() {
               </div>
               <p className="font-semibold">Remixed By</p>
               <div className="flex flex-col h-[430px] w-full mb-5 gap-4 overflow-y-auto scroll-container p-2">
-                {Array.from({length: 7}).map((_, index) => (
+                {remixes.map((item: any, index: Key | null | undefined) => (
                   <div
                     className="h-[70px] w-full border border-black rounded-md flex-shrink-0 flex items-center justify-around"
                     key={index}
                   >
                     <Avatar>
                       <AvatarImage
-                        src="/boy.png"
+                        src={item.imageUrl}
                         className="h-10 w-10 rounded-full overflow-hidden object-cover"
                       />
                       <AvatarFallback>CN</AvatarFallback>
                     </Avatar>
-                    <p>Jaydeep Dey</p>
+                    <p>{item.owner.slice(0, 6)}...{item?.owner.slice(-4)}</p>
                     <Button
                       className="rounded-full border border-slate-800 focus-visible:ring-0"
                       variant={"outline"}
                       size={"icon"}
-                      onClick={() => router.push(`/remix/${index + 1}`)}
+                      onClick={() => {
+                        if (typeof index === 'number') {
+                          router.push(`/remix/${Number(item.remixId)}`);
+                        }
+                      }}
                     >
                       <Shuffle className="h-4 w-4" />
                     </Button>

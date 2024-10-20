@@ -1,14 +1,55 @@
 import Navbar from "@/components/Navbar";
 
 import {Button} from "@/components/ui/button";
+import { useGlobalContext } from "@/context/GlobalContext";
 import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {Heart, Share, Shuffle} from "lucide-react";
 import {useRouter} from "next/router";
+import { useEffect, useState } from "react";
 
 export default function EachPicturePage() {
   const router = useRouter();
   console.log(router.query.id);
+
+  const {
+    getPostDetails,
+    walletClient,
+    publicClient,
+    provider,
+    loggedInAddress,
+    CONTRACT_ADDRESS,
+    getRemixDetails,
+  } = useGlobalContext();
+
+  const [remixInfo, setRemixInfo] = useState<any>(null);
+  const [postInfo, setPostInfo] = useState<any>(null);
+
+
+  useEffect(() => {
+    (async function () {
+      if (provider && walletClient && publicClient) {
+        console.log(router.query.id, "router.query.id");
+        const val =  await getRemixDetails(parseInt(router.query.id as string));
+        console.log(val, "val");
+        if (val !== undefined && val !== null) {
+          setRemixInfo(val);
+        }
+
+        const val2 = await getPostDetails(parseInt(router.query.id as string));
+        console.log(val2, "val");
+        if (val) {
+          setPostInfo(val2);
+        }
+      }
+    }
+    )();
+  }
+  , [provider, walletClient, publicClient, router]);
+
+
+
+
   return (
     <div
       className={`min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
@@ -17,21 +58,21 @@ export default function EachPicturePage() {
       <div className="w-full h-fit flex justify-center items-center p-6">
         <div className="rounded-3xl bg-white border border-slate-800 h-fit lg:h-[650px] w-[900px] flex overflow-hidden flex-col lg:flex-row">
           <div className="w-full h-[600px] md:h-[400px] lg:w-3/5 lg:h-full flex items-center border-b lg:border-r lg:border-b-0 border-slate-800 overflow-hidden">
-            <img src={`/boy.png`} alt="taylor" className="" />
+            <img src={remixInfo?.imageUrl} alt="taylor" className="" />
           </div>
           <div className="lg:w-2/5 lg:h-full flex flex-col pt-5 gap-4">
             <div className="h-fit px-5 flex items-center">
               <div className="flex items-center gap-2">
                 <Avatar>
                   <AvatarImage
-                    src="/boy.png"
+                    src={remixInfo?.imageUrl}
                     className="h-12 w-12 rounded-full overflow-hidden object-cover"
                   />
                   <AvatarFallback>CN</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col justify-start gap-0">
                   <p className="text-sm font-normal">Creator</p>
-                  <p className="text-lg font-semibold">Jaydeep Dey</p>
+                  <p className="text-lg font-semibold">{remixInfo?.owner.slice(0, 6)}...{remixInfo?.owner.slice(-4)}</p>
                 </div>
               </div>
             </div>
@@ -47,10 +88,7 @@ export default function EachPicturePage() {
               <div className="flex flex-col justify-start gap-2">
                 <p className="font-semibold">Description</p>
                 <div className="flex flex-col h-fit w-full gap-4 overflow-y-auto scroll-container">
-                  Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                  Nihil rerum non ex voluptates saepe cum placeat iusto eligendi
-                  perferendis quibusdam dolores sapiente molestias debitis
-                  dolores
+                  {remixInfo?.description}
                 </div>
               </div>
               <p className="font-semibold">Remixed from</p>
@@ -59,19 +97,19 @@ export default function EachPicturePage() {
                   <div className="h-fit flex items-center gap-2 text-lg font-semibold">
                     <Avatar>
                       <AvatarImage
-                        src="/taylor2.png"
+                        src={postInfo?.imageUrl}
                         className="h-10 w-10 rounded-full overflow-hidden object-cover"
                       />
                       <AvatarFallback>CN</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col justify-start">
                       <p className="text-xs font-normal">Artist</p>
-                      <p className="text-sm font-semibold">Taylor Swift</p>
+                      <p className="text-sm font-semibold">{postInfo?.owner.slice(0, 6)}...{postInfo?.owner.slice(-4)}</p>
                     </div>
                   </div>
                   <div className="rounded overflow-hidden h-12 w-12">
                     <img
-                      src={`/taylor.png`}
+                      src={postInfo?.imageUrl}
                       alt="taylor"
                       className="h-full w-full object-cover"
                     />
