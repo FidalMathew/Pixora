@@ -25,7 +25,7 @@ import {iliadNftAbi} from "@/utils/iliadNftAbi";
 const GlobalContext = createContext({
   createPostLoading: false,
   createRemixLoading: false,
-  getPostDetails: (postId: number) => {},
+  getPostDetails: (postId: number) => Promise.resolve({}),
   getRemixDetails: (remixId: number) => {},
   loggedInAddress: "" as string | undefined,
   publicClient: undefined as PublicClient | undefined,
@@ -51,6 +51,8 @@ const GlobalContext = createContext({
   getAllRemixes: async () => {},
   getUserPosts: (userAddress: string) => Promise.resolve(),
   getRemixesByPostId: (postId: number) => Promise.resolve(),
+  allPosts: [] as any[],
+  allRemixes: [] as any[],
 });
 
 export default function GlobalContextProvider({
@@ -58,12 +60,16 @@ export default function GlobalContextProvider({
 }: {
   children: ReactNode;
 }) {
-  const [provider, setProvider] = useState<EIP1193Provider>();
-  const [walletClient, setWalletClient] = useState<WalletClient>();
-  const [publicClient, setPublicClient] = useState<PublicClient>();
   const router = useRouter();
   const {ready, authenticated} = usePrivy();
   const {wallets} = useWallets();
+
+  const [provider, setProvider] = useState<EIP1193Provider>();
+  const [walletClient, setWalletClient] = useState<WalletClient>();
+  const [publicClient, setPublicClient] = useState<PublicClient>();
+
+  const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [allRemixes, setAllRemixes] = useState<any[]>([]);
 
   const CONTRACT_ADDRESS = "0x7a824c85043391560A18eEd0f5460E5B659752A6";
   // const PIXORA_ABI: never[] = []
@@ -241,6 +247,8 @@ export default function GlobalContextProvider({
 
         console.log(data, "Post Details");
         console.log(data, `Remixes for Post ID ${postId}`);
+
+        return data as any;
       }
     } catch (error) {
       console.error("Error fetching post details:", error);
@@ -274,6 +282,7 @@ export default function GlobalContextProvider({
           functionName: "getAllPosts",
         });
 
+        setAllPosts(data as any[]);
         console.log(data, "All Posts");
       }
     } catch (error) {
@@ -290,12 +299,21 @@ export default function GlobalContextProvider({
           functionName: "getAllRemixes",
         });
 
+        setAllRemixes(data as any[]);
+
         console.log(data, "All Remixes");
       }
     } catch (error) {
       console.error("Error fetching all remixes:", error);
     }
   };
+
+  useEffect(() => {
+    if (ready && authenticated && walletClient && publicClient) {
+      getAllPosts();
+      getAllRemixes();
+    }
+  }, [walletClient, publicClient, provider, ready, wallets, router]);
 
   const getUserPosts = async (userAddress: string): Promise<void> => {
     try {
@@ -351,6 +369,8 @@ export default function GlobalContextProvider({
         getAllRemixes,
         getUserPosts,
         getRemixesByPostId,
+        allPosts,
+        allRemixes,
       }}
     >
       {children}
