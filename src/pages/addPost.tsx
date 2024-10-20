@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import {useGlobalContext} from "@/context/GlobalContext";
 import PIXORA_ABI from "@/utils/abi.json";
-import {baseSepolia} from "viem/chains";
 import {useWallets} from "@privy-io/react-auth";
 import {
   Address,
@@ -58,13 +57,14 @@ export default function AddPost() {
   const {wallets} = useWallets();
 
   const {
-    publicClient,
-    walletClient,
     CONTRACT_ADDRESS,
     storyClient,
     nftMinttoStory,
     provider,
     createPost,
+    publicClient,
+    walletClient,
+    loggedInAddress,
   } = useGlobalContext();
 
   // there are 3 states, uploading to ipfs, add post to blockchain, and mint nft for that, make useStates to handle loading, errors and successful msg for each state
@@ -130,9 +130,7 @@ export default function AddPost() {
       image: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
     };
 
-    uploadJson(json);
-
-
+    // await uploadJson(json);
 
     return {
       ipfsUri: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
@@ -140,173 +138,36 @@ export default function AddPost() {
     };
   };
 
-  const uploadJson = async (jsonData: { image: string; description: string }) => {
+  const uploadJson = async (jsonData: {image: string; description: string}) => {
     try {
       // Step 1: Fetch JWT or authentication key
       const keyRequest = await fetch("/api/upload"); // Endpoint to get your Pinata JWT
       const keyData = await keyRequest.json();
-  
+
       // Step 2: Upload the JSON data to IPFS using Pinata
       const jsonUpload = await pinata.upload.json(jsonData).key(keyData.JWT);
-  
 
-      console.log(jsonUpload, "jsonUpload", `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`);
+      console.log(
+        jsonUpload,
+        "jsonUpload",
+        `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`
+      );
 
       // Step 3: Return the IPFS URI of the uploaded JSON
       // imageUrl: string, description: string, canvasSize: string, tokenURI: string
-      createPost(jsonData.image, jsonData.description, "1080x1080", `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`);
+      // createPost(
+      //   jsonData.image,
+      //   jsonData.description,
+      //   "1080x1080",
+      //   `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`
+      // );
 
       return {
         jsonIpfsUri: `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`, // JSON metadata IPFS link
       };
     } catch (error) {
       console.error("Error uploading JSON to IPFS:", error);
-      throw new Error("JSON upload failed");
-    }
-  };
-  
-
-
-
-  const addPostToBlockchain = async (
-    imageUrl: string,
-    description: string,
-    canvasSize: string
-  ) => {
-    if (!walletClient || !publicClient || !wallets[0]) return;
-    try {
-      const tx = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS as Hex,
-        abi: PIXORA_ABI,
-        functionName: "createPost",
-        account: wallets[0].address as `0x${string}`, // Ensure loggedInAddress is properly set
-        args: [imageUrl, description, canvasSize],
-        chain: baseSepolia,
-      });
-
-      await publicClient.waitForTransactionReceipt({hash: tx});
-      console.log("Post successfully created");
-    } catch (error) {
-      console.error("Error adding post to blockchain:", error);
-    }
-  };
-
-  const handleMintPost = async (
-    imageUrl: string,
-    description: string,
-    canvasSize: string
-  ) => {
-    if (!file) {
-      // alert("No file selected");
-      toast.error("No file selected");
-      return;
-    }
-
-    if (!walletClient || !publicClient || !wallets[0]) return;
-
-    // Step 1: Upload image to IPFS
-
-    try {
-      await wallets[0].switchChain(baseSepolia.id);
-      setExecutionState((prevState) => ({
-        ...prevState,
-        uploadingToIPFS: true,
-        ipfsError: null,
-        ipfsSuccess: null,
-      }));
-
-      const keyRequest = await fetch("/api/upload");
-      const keyData = await keyRequest.json();
-      const upload = await pinata.upload.file(file).key(keyData.JWT);
-      console.log(upload);
-      setIpfsUrl(upload.IpfsHash);
-      setExecutionState((prevState) => ({
-        ...prevState,
-        uploadingToIPFS: false,
-        ipfsSuccess: "Image uploaded to IPFS successfully!",
-      }));
-    } catch (e: any) {
-      console.log(e);
-      toast.error(e.message);
-      setExecutionState((prevState) => ({
-        ...prevState,
-        uploadingToIPFS: false,
-        ipfsError: "Trouble uploading file",
-      }));
-      return;
-    }
-
-    // Step 2: Mint NFT
-
-    try {
-      setExecutionState((prevState) => ({
-        ...prevState,
-        mintingNFT: true,
-        nftError: null,
-        nftSuccess: null,
-      }));
-
-      const tx = await walletClient.writeContract({
-        address: "0x9A86cfBA5Db5f7DD1494F80522B90aEc4121D63a" as Hex,
-        abi: NFTMintABI,
-        functionName: "mintPost",
-        account: wallets[0].address as `0x${string}`,
-        args: [ipfsUrl, "nft info"],
-        chain: baseSepolia,
-      });
-
-      await publicClient.waitForTransactionReceipt({hash: tx});
-      console.log("NFT successfully minted");
-
-      setExecutionState((prevState) => ({
-        ...prevState,
-        mintingNFT: false,
-        nftSuccess: tx,
-      }));
-    } catch (error: any) {
-      toast.error(error.message);
-      setExecutionState((prevState) => ({
-        ...prevState,
-        mintingNFT: false,
-        nftError: "Error minting NFT",
-      }));
-      return;
-    }
-
-    // Step 3: Add post to blockchain
-    try {
-      setExecutionState((prevState) => ({
-        ...prevState,
-        addingPostToBlockchain: true,
-        blockchainError: null,
-        blockchainSuccess: null,
-      }));
-
-      const tx = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS as Hex,
-        abi: PIXORA_ABI,
-        functionName: "createPost",
-        account: wallets[0].address as `0x${string}`,
-        args: [ipfsUrl, description, canvasSize],
-        chain: baseSepolia,
-      });
-
-      await publicClient.waitForTransactionReceipt({hash: tx});
-      console.log("Post successfully added to blockchain");
-
-      setExecutionState((prevState) => ({
-        ...prevState,
-        addingPostToBlockchain: false,
-        blockchainSuccess: tx,
-      }));
-    } catch (error: any) {
-      toast.error(error.message);
-      setExecutionState((prevState) => ({
-        ...prevState,
-        addingPostToBlockchain: false,
-        blockchainError: "Error adding post to blockchain",
-      }));
-      return;
+      // throw new Error("JSON upload failed");
     }
   };
 
@@ -346,31 +207,6 @@ export default function AddPost() {
     );
   };
 
-  // const mintAndRegisterNFT = async (file: File, description: string) => {
-  //   if (!storyClient || !file) return;
-  //   try {
-  //     await wallets[0].switchChain(iliad.id);
-  //     setUploading(true);
-  //     const {ipfsUri, ipfsJson} = await uploadFile(file, description);
-
-  //     const tokenId = await nftMinttoStory(
-  //       wallets[0].address as Address,
-  //       ipfsUri
-  //     );
-  //     registerExistingNFT(
-  //       tokenId,
-  //       "0xd2a4a4Cb40357773b658BECc66A6c165FD9Fc485",
-  //       ipfsUri,
-  //       ipfsJson
-  //     );
-  //   } catch (err: any) {
-  //     console.log(err);
-  //     toast.error(err.message);
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
-
   // there are 4 states, upload to ipfs, mint nft to story, register nft as ip, attach term to ip, mint a license token, usestate for item
   const [executionIpState, setExecutionIpState] = useState<{
     uploadingIpToIPFS: boolean;
@@ -388,6 +224,10 @@ export default function AddPost() {
     attachTermToIpLoading: boolean;
     attachTermToIpError: string | null;
     attachTermToIpSuccess: string | null;
+
+    createPostLoading: boolean;
+    createPostError: string | null;
+    createPostSuccess: string | null;
   }>({
     uploadingIpToIPFS: false,
     ipfsIpError: null,
@@ -404,6 +244,10 @@ export default function AddPost() {
     attachTermToIpLoading: false,
     attachTermToIpError: null,
     attachTermToIpSuccess: null,
+
+    createPostLoading: false,
+    createPostError: null,
+    createPostSuccess: null,
   });
 
   const [ipfsUri, setIpfsUri] = useState<string | null>(null);
@@ -420,7 +264,15 @@ export default function AddPost() {
   ) => {
     console.log(storyClient, provider, file, "storyClient, provider, file");
 
-    if (!storyClient || !file || !provider) return;
+    if (
+      !storyClient ||
+      !file ||
+      !provider ||
+      !publicClient ||
+      !walletClient ||
+      !loggedInAddress
+    )
+      return;
 
     console.log("Executing Story Protocol functionalities...");
     // step 1: upload to ipfs
@@ -437,6 +289,7 @@ export default function AddPost() {
       console.log("Uploading to IPFS...");
 
       const {ipfsUri, ipfsJson} = await uploadFile(file, description);
+      const tokenURI = await uploadJson(ipfsJson);
 
       setIpfsJson(ipfsJson);
       setIpfsUri(ipfsUri);
@@ -558,6 +411,78 @@ export default function AddPost() {
               attachTermToIpLoading: false,
               attachTermToIpSuccess: response.txHash!,
             }));
+
+            // Step 5: Listing it to Feed
+
+            try {
+              setExecutionIpState((prevState) => ({
+                ...prevState,
+                createPostLoading: true,
+                createPostError: null,
+                createPostSuccess: null,
+              }));
+
+              console.log("Listing it to Feed...");
+
+              console.log(tokenURI, "tokenURI");
+              console.log(ipfsJson, "ipfsJson");
+              console.log(description, "description");
+
+              try {
+                setExecutionIpState((prevState) => ({
+                  ...prevState,
+                  createPostLoading: true,
+                  createPostError: null,
+                  createPostSuccess: null,
+                }));
+
+                console.log("Listing it to Feed...");
+
+                const tx = await walletClient.writeContract({
+                  address: CONTRACT_ADDRESS as Hex,
+                  abi: PIXORA_ABI,
+                  functionName: "createPost",
+                  account: loggedInAddress as `0x${string}`,
+                  args: [
+                    ipfsJson.image,
+                    description || "hello",
+                    "1080x1080",
+                    tokenURI?.jsonIpfsUri,
+                  ],
+                  chain: iliad,
+                });
+
+                await publicClient.waitForTransactionReceipt({hash: tx});
+                console.log("Post successfully  ");
+
+                setExecutionIpState((prevState) => ({
+                  ...prevState,
+                  createPostLoading: false,
+                  createPostSuccess: tx,
+                }));
+              } catch (error: any) {
+                toast.error(error.message);
+                setExecutionIpState((prevState) => ({
+                  ...prevState,
+                  createPostLoading: false,
+                  createPostError: "Error creating post",
+                }));
+                return;
+              }
+              setExecutionIpState((prevState) => ({
+                ...prevState,
+                createPostLoading: false,
+                createPostSuccess: "Post created successfully",
+              }));
+            } catch (error: any) {
+              toast.error(error.message);
+              setExecutionIpState((prevState) => ({
+                ...prevState,
+                createPostLoading: false,
+                createPostError: "Error creating post",
+              }));
+              return;
+            }
           } catch (error: any) {
             console.log(error);
             toast.error(error.message);
@@ -600,26 +525,33 @@ export default function AddPost() {
     }
   };
 
+  // const click = async () => {
+  //   console.log(storyClient, provider, file, "storyClient, provider, file");
+
+  //   console.log("Executing Story Protocol functionalities...");
+  //   // step 1: upload to ipfs
+
+  // };
   const [openStatus, setOpenStatus] = useState(false);
   const [openIpStatusModal, setOpenIpStatusModal] = useState(false);
 
   const makeDerivate = async () => {
     if (!storyClient) return;
     try {
-      const response = await storyClient.ipAsset.registerDerivative({
-        childIpId: "0xb5787a965763115c26F90691704Cfc6b2A341d32",
-        parentIpIds: ["0x70E9121441C2B6627EA5b6e26A5D58393f54e539"],
-        licenseTermsIds: ["2"],
-        txOptions: {waitForTransaction: true},
-      });
+      const response =
+        await storyClient.ipAsset.registerDerivativeWithLicenseTokens({
+          childIpId: "0x6B70552D088f72A02da130cD3e4CD9852AD8aA3C",
+          licenseTokenIds: [204793],
+          txOptions: {waitForTransaction: true},
+        });
     } catch (error: any) {
       toast.error(error.message);
       console.log(error);
     }
   };
 
-  // https://explorer.story.foundation/ipa/0x70E9121441C2B6627EA5b6e26A5D58393f54e539
   // https://explorer.story.foundation/ipa/0xb5787a965763115c26F90691704Cfc6b2A341d32
+  // https://explorer.story.foundation/ipa/0x6B70552D088f72A02da130cD3e4CD9852AD8aA3C
 
   return (
     <div className="min-h-screen w-full bg-white text-black ">
@@ -750,6 +682,36 @@ export default function AddPost() {
                     <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
                   ) : (
                     executionIpState.attachTermToIpError !== null && (
+                      <CircleX className="h-9 w-9 fill-red-700 text-white" />
+                    )
+                  )}
+                </div>
+                <div className="w-full h-[80px] flex items-center px-4">
+                  <div className="flex flex-col w-full">
+                    <p className="text-xl w-full">Listing it to Feed</p>
+                    <p className="text-xs text-blue-800 max-w-sm truncate">
+                      {executionIpState.createPostSuccess && (
+                        <a
+                          href={`https://explorer.story.foundation/transactions/${executionIpState.createPostSuccess}`}
+                          target="_blank"
+                        >
+                          {" "}
+                          {`https://explorer.story.foundation/transactions/${executionIpState.createPostSuccess}`}
+                        </a>
+                      )}
+                      {executionIpState.createPostError && (
+                        <p className="text-red-700">
+                          {executionIpState.createPostError}
+                        </p>
+                      )}
+                    </p>
+                  </div>
+                  {executionIpState.createPostLoading ? (
+                    <ReloadIcon className="h-5 w-5 animate-spin" />
+                  ) : executionIpState.createPostSuccess ? (
+                    <CircleCheck className="h-9 w-9 fill-green-700 text-white" />
+                  ) : (
+                    executionIpState.createPostError !== null && (
                       <CircleX className="h-9 w-9 fill-red-700 text-white" />
                     )
                   )}
@@ -969,7 +931,9 @@ export default function AddPost() {
                   type="submit"
                   className="w-full h-10 rounded-full border border-slate-800 focus-visible:ring-0"
                   disabled={imageUrl === "" || ipfsUrl !== ""}
-                  onClick={()=>uploadFile(file as File, formik.values.description)}
+                  onClick={() =>
+                    uploadFile(file as File, formik.values.description)
+                  }
                   // onClick={() => {
                   //   setOpenStatus((prev) => !prev);
                   //   if (imageUrl) {
@@ -997,14 +961,14 @@ export default function AddPost() {
                 >
                   Mint NFT to Story
                 </Button>
-                <Button
+                {/* <Button
                   className="rounded-full"
                   onClick={() => {
                     makeDerivate();
                   }}
                 >
                   Derivate
-                </Button>
+                </Button> */}
                 {/* 
                 <Button
                   className="w-full rounded-full"

@@ -22,7 +22,6 @@ import {iliadNftAbi} from "@/utils/iliadNftAbi";
 // import NFTJson from "@/utils/NFT.json";
 // import NFTMarketJson from "@/utils/NFTMarket.json";
 
-
 const GlobalContext = createContext({
   createPostLoading: false,
   createRemixLoading: false,
@@ -35,8 +34,19 @@ const GlobalContext = createContext({
   nftMinttoStory: (to: Address, uri: string) => Promise.resolve(""),
   storyClient: null as StoryClient | null,
   provider: undefined as EIP1193Provider | undefined,
-  createPost: (imageUrl: string, description: string, canvasSize: string, tokenURI: string) => Promise.resolve(),
-  createRemix: (postId: number, imageUrl: string, description: string, canvasSize: string, tokenURI: string) => Promise.resolve(),
+  createPost: (
+    imageUrl: string,
+    description: string,
+    canvasSize: string,
+    tokenURI: string
+  ) => Promise.resolve(),
+  createRemix: (
+    postId: number,
+    imageUrl: string,
+    description: string,
+    canvasSize: string,
+    tokenURI: string
+  ) => Promise.resolve(),
   getAllPosts: async () => {},
   getAllRemixes: async () => {},
   getUserPosts: (userAddress: string) => Promise.resolve(),
@@ -55,7 +65,7 @@ export default function GlobalContextProvider({
   const {ready, authenticated} = usePrivy();
   const {wallets} = useWallets();
 
-  const CONTRACT_ADDRESS = "0x46eD35D7cAD9ed582d6D0106A6A6fF7cec10Dd12";
+  const CONTRACT_ADDRESS = "0x7a824c85043391560A18eEd0f5460E5B659752A6";
   // const PIXORA_ABI: never[] = []
   const [storyClient, setStoryClient] = useState<StoryClient | null>(null);
 
@@ -81,7 +91,8 @@ export default function GlobalContextProvider({
         // console.log("executed");
         const walletClient = createWalletClient({
           transport: custom(provider),
-          chain: baseSepolia,
+          // chain: iliad,
+          chain: iliad,
         });
 
         const publicClient = createPublicClient({
@@ -163,8 +174,12 @@ export default function GlobalContextProvider({
   const [createPostLoading, setCreatePostLoading] = useState(false);
   const [createRemixLoading, setCreateRemixLoading] = useState(false);
 
-  const createPost = async (imageUrl: string, description: string, canvasSize: string, tokenURI: string) => {
-    setCreatePostLoading(true);
+  const createPost = async (
+    imageUrl: string,
+    description: string,
+    canvasSize: string,
+    tokenURI: string
+  ) => {
     try {
       if (publicClient && walletClient) {
         const tx = await walletClient.writeContract({
@@ -175,20 +190,23 @@ export default function GlobalContextProvider({
           args: [imageUrl, description, canvasSize, tokenURI],
           chain: baseSepolia,
         });
-  
-        await publicClient.waitForTransactionReceipt({ hash: tx });
-        console.log("Post successfully created");
+
+        await publicClient.waitForTransactionReceipt({hash: tx});
+        console.log("Post successfully  ");
       }
     } catch (error) {
       console.error("Error creating post:", error);
-    } finally {
-      setCreatePostLoading(false);
+      return;
     }
   };
 
-  
-
-  const createRemix = async (postId: number, imageUrl: string, description: string, canvasSize: string, tokenURI: string) => {
+  const createRemix = async (
+    postId: number,
+    imageUrl: string,
+    description: string,
+    canvasSize: string,
+    tokenURI: string
+  ) => {
     setCreateRemixLoading(true);
     try {
       if (publicClient && walletClient) {
@@ -200,8 +218,8 @@ export default function GlobalContextProvider({
           args: [postId, imageUrl, description, canvasSize, tokenURI],
           chain: baseSepolia,
         });
-  
-        await publicClient.waitForTransactionReceipt({ hash: tx });
+
+        await publicClient.waitForTransactionReceipt({hash: tx});
         console.log("Remix successfully created");
       }
     } catch (error) {
@@ -211,7 +229,6 @@ export default function GlobalContextProvider({
     }
   };
 
-  
   const getPostDetails = async (postId: number) => {
     try {
       if (publicClient) {
@@ -221,7 +238,7 @@ export default function GlobalContextProvider({
           functionName: "getPost",
           args: [postId],
         });
-  
+
         console.log(data, "Post Details");
         console.log(data, `Remixes for Post ID ${postId}`);
       }
@@ -230,7 +247,6 @@ export default function GlobalContextProvider({
     }
   };
 
-  
   const getRemixDetails = async (remixId: number) => {
     try {
       if (publicClient) {
@@ -240,7 +256,7 @@ export default function GlobalContextProvider({
           functionName: "getRemix",
           args: [remixId],
         });
-  
+
         console.log(data, "Remix Details");
         return data;
       }
@@ -257,14 +273,14 @@ export default function GlobalContextProvider({
           abi: PIXORA_ABI,
           functionName: "getAllPosts",
         });
-  
+
         console.log(data, "All Posts");
       }
     } catch (error) {
       console.error("Error fetching all posts:", error);
     }
   };
-  
+
   const getAllRemixes = async (): Promise<void> => {
     try {
       if (publicClient) {
@@ -273,49 +289,47 @@ export default function GlobalContextProvider({
           abi: PIXORA_ABI,
           functionName: "getAllRemixes",
         });
-  
+
         console.log(data, "All Remixes");
       }
     } catch (error) {
       console.error("Error fetching all remixes:", error);
     }
   };
-  
-  const getUserPosts = async (userAddress: string): Promise<void> => {
-      try {
-        if (publicClient) {
-          const data = await publicClient.readContract({
-            address: CONTRACT_ADDRESS,
-            abi: PIXORA_ABI,
-            functionName: "getUserPosts",
-            args: [userAddress],
-          });
-    
-          console.log(data, `Posts by ${userAddress}`);
-        }
-      } catch (error) {
-        console.error("Error fetching user posts:", error);
-      }
-    };
-  
-  const getRemixesByPostId = async (postId: number): Promise<void> => {
-      try {
-        if (publicClient) {
-          const data = await publicClient.readContract({
-            address: CONTRACT_ADDRESS,
-            abi: PIXORA_ABI,
-            functionName: "getRemixesByPostId",
-            args: [postId],
-          });
-    
-          console.log(data, `Remixes for Post ID ${postId}`);
-        }
-      } catch (error) {
-        console.error("Error fetching remixes by post ID:", error);
-      }
-    };
-  
 
+  const getUserPosts = async (userAddress: string): Promise<void> => {
+    try {
+      if (publicClient) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: PIXORA_ABI,
+          functionName: "getUserPosts",
+          args: [userAddress],
+        });
+
+        console.log(data, `Posts by ${userAddress}`);
+      }
+    } catch (error) {
+      console.error("Error fetching user posts:", error);
+    }
+  };
+
+  const getRemixesByPostId = async (postId: number): Promise<void> => {
+    try {
+      if (publicClient) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: PIXORA_ABI,
+          functionName: "getRemixesByPostId",
+          args: [postId],
+        });
+
+        console.log(data, `Remixes for Post ID ${postId}`);
+      }
+    } catch (error) {
+      console.error("Error fetching remixes by post ID:", error);
+    }
+  };
 
   return (
     <GlobalContext.Provider
@@ -337,7 +351,6 @@ export default function GlobalContextProvider({
         getAllRemixes,
         getUserPosts,
         getRemixesByPostId,
-        
       }}
     >
       {children}
