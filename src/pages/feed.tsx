@@ -101,7 +101,7 @@ export default function Feed() {
                   src={item.imageUrl}
                   alt="taylor"
                   className="w-full object-contain cursor-pointer"
-                  onClick={() => router.push(`/pics/${index}`)}
+                  onClick={() => router.push(`/remix/${item.remixId}`)}
                   style={{height: "calc((100% * 5 / 6) - 50px)"}}
                 />
                 <div className="h-[50px] flex items-center px-5 gap-2 text-sm font-light">
