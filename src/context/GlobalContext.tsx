@@ -26,7 +26,7 @@ const GlobalContext = createContext({
   createPostLoading: false,
   createRemixLoading: false,
   getPostDetails: (postId: number) => Promise.resolve({}),
-  getRemixDetails: (remixId: number) =>  Promise.resolve({}),
+  getRemixDetails: (remixId: number) => Promise.resolve({}),
   loggedInAddress: "" as string | undefined,
   publicClient: undefined as PublicClient | undefined,
   walletClient: undefined as WalletClient | undefined,
@@ -71,7 +71,8 @@ export default function GlobalContextProvider({
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [allRemixes, setAllRemixes] = useState<any[]>([]);
 
-  const CONTRACT_ADDRESS = "0x7a824c85043391560A18eEd0f5460E5B659752A6";
+  // const CONTRACT_ADDRESS = "0x7a824c85043391560A18eEd0f5460E5B659752A6";
+  const CONTRACT_ADDRESS = "0x519a9057Bfe3e6bab6EDb7128b7Dba44d2adC083";
   // const PIXORA_ABI: never[] = []
   const [storyClient, setStoryClient] = useState<StoryClient | null>(null);
 

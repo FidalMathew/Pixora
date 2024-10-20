@@ -24,7 +24,7 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         <img
           src={"/user.png"}
-          onClick={() => router.push("/artistprofile")}
+          onClick={() => router.push("/profile")}
           alt="user"
           className="h-8 w-8 border rounded-full border-gray-700 cursor-pointer"
         />
