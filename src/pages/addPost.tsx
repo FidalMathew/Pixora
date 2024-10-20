@@ -63,6 +63,7 @@ export default function AddPost() {
     storyClient,
     nftMinttoStory,
     provider,
+    createPost,
   } = useGlobalContext();
 
   // there are 3 states, uploading to ipfs, add post to blockchain, and mint nft for that, make useStates to handle loading, errors and successful msg for each state
@@ -128,11 +129,43 @@ export default function AddPost() {
       image: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
     };
 
+    uploadJson(json);
+
+
+
     return {
       ipfsUri: `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`,
       ipfsJson: json,
     };
   };
+
+  const uploadJson = async (jsonData: { image: string; description: string }) => {
+    try {
+      // Step 1: Fetch JWT or authentication key
+      const keyRequest = await fetch("/api/upload"); // Endpoint to get your Pinata JWT
+      const keyData = await keyRequest.json();
+  
+      // Step 2: Upload the JSON data to IPFS using Pinata
+      const jsonUpload = await pinata.upload.json(jsonData).key(keyData.JWT);
+  
+
+      console.log(jsonUpload, "jsonUpload", `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`);
+
+      // Step 3: Return the IPFS URI of the uploaded JSON
+      // imageUrl: string, description: string, canvasSize: string, tokenURI: string
+      createPost(jsonData.image, jsonData.description, "1080x1080", `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`);
+
+      return {
+        jsonIpfsUri: `https://gateway.pinata.cloud/ipfs/${jsonUpload.IpfsHash}`, // JSON metadata IPFS link
+      };
+    } catch (error) {
+      console.error("Error uploading JSON to IPFS:", error);
+      throw new Error("JSON upload failed");
+    }
+  };
+  
+
+
 
   const addPostToBlockchain = async (
     imageUrl: string,
@@ -920,19 +953,19 @@ export default function AddPost() {
                   type="submit"
                   className="w-full h-10 rounded-full border border-slate-800 focus-visible:ring-0"
                   disabled={imageUrl === "" || ipfsUrl !== ""}
-                  // onClick={uploadFile}
-                  onClick={() => {
-                    setOpenStatus((prev) => !prev);
-                    if (imageUrl) {
-                      handleMintPost(
-                        imageUrl,
-                        formik.values.description,
-                        formik.values.canvasSize
-                      );
-                    }
-                  }}
+                  onClick={()=>uploadFile(file as File, formik.values.description)}
+                  // onClick={() => {
+                  //   setOpenStatus((prev) => !prev);
+                  //   if (imageUrl) {
+                  //     handleMintPost(
+                  //       imageUrl,
+                  //       formik.values.description,
+                  //       formik.values.canvasSize
+                  //     );
+                  //   }
+                  // }}
                 >
-                  Mint and Create Post
+                  Mint and Create Post --test
                 </Button>
 
                 <Button
