@@ -6,10 +6,13 @@ import {Heart, Share, Shuffle} from "lucide-react";
 import {useRouter} from "next/router";
 import {useGlobalContext} from "@/context/GlobalContext";
 import {useState, useEffect, Key} from "react";
+import {Hex} from "viem";
+import PIXORA_ABI from "@/utils/abi.json";
 
 export default function EachPicturePage() {
   const router = useRouter();
   console.log(router.query.id);
+  const [userDetails, setUserDetails] = useState<any>([]);
 
   const {
     getPostDetails,
@@ -28,15 +31,16 @@ export default function EachPicturePage() {
     (async function () {
       if (provider && walletClient && publicClient) {
         console.log(router.query.id, "router.query.id");
-        const val = await getPostDetails(parseInt(router.query.id as string));
+
+        const postId = parseInt(router.query.id as string);
+        const val = await getPostDetails(postId);
         console.log(val, "val");
+
         if (val) {
           setPostInfo(val);
         }
 
-        const res = await getRemixesByPostId(
-          parseInt(router.query.id as string)
-        );
+        const res = await getRemixesByPostId(postId);
         console.log(res, "remixes");
 
         if (Array.isArray(res)) {
@@ -44,7 +48,35 @@ export default function EachPicturePage() {
         }
       }
     })();
-  }, [provider, walletClient, publicClient, router]);
+  }, [provider, walletClient, publicClient, router.query.id]);
+
+  const getUserDetailsFunction = async (address: string) => {
+    try {
+      if (publicClient) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "getUser",
+          args: [address],
+        });
+
+        console.log(data, "user Details");
+
+        if (data) {
+          setUserDetails(data);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching post details:", error);
+    }
+  };
+
+  // useEffect(() => {
+  //   if (provider && walletClient && publicClient) {
+  //   }
+  // }, [walletClient, publicClient, provider, loggedInAddress, CONTRACT_ADDRESS]);
+
+  console.log(userDetails, "userDetails");
 
   return (
     <div

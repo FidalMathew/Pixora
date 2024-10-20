@@ -22,6 +22,11 @@ import {Field, Form, Formik} from "formik";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import Dropzone from "react-dropzone";
+import {pinata} from "@/utils/config";
+import PIXORA_ABI from "@/utils/abi.json";
+import {iliad} from "@story-protocol/core-sdk";
+import {Hex} from "viem";
+import {ReloadIcon} from "@radix-ui/react-icons";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -37,10 +42,15 @@ export default function Profile() {
   const {wallets} = useWallets();
   const router = useRouter();
 
-  const {} = useGlobalContext();
+  const {
+    getUserPosts,
+    walletClient,
+    publicClient,
+    provider,
+    loggedInAddress,
+    CONTRACT_ADDRESS,
+  } = useGlobalContext();
 
-  const {getUserPosts, walletClient, publicClient, provider} =
-    useGlobalContext();
   const [posts, setPosts] = useState<any[]>([]);
   const [remixes, setRemixes] = useState<any[]>([]);
 
@@ -60,6 +70,60 @@ export default function Profile() {
   const wallet = wallets[0];
 
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const createUser = async (name: string, picUrl: string) => {
+    try {
+      if (publicClient && walletClient) {
+        const tx = await walletClient.writeContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "registerUser",
+          account: loggedInAddress as `0x${string}`,
+          args: [name, picUrl, loggedInAddress, true],
+          chain: iliad,
+        });
+
+        await publicClient.waitForTransactionReceipt({hash: tx});
+        console.log("User added successfully  ");
+      }
+    } catch (error) {
+      console.error("Error creating post:", error);
+      return;
+    }
+  };
+
+  const [userDetails, setUserDetails] = useState<any>(null);
+
+  const getUserDetailsFunction = async () => {
+    try {
+      if (publicClient && loggedInAddress) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "getUser",
+          args: [loggedInAddress],
+        });
+
+        console.log(data, "user Details");
+
+        if (data) {
+          setUserDetails(data);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching post details:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (provider && walletClient && publicClient) {
+      getUserDetailsFunction();
+    }
+  }, [walletClient, publicClient, provider, loggedInAddress, CONTRACT_ADDRESS]);
+
+  console.log(userDetails, "userDetails");
+
   return (
     <div
       className={`h-screen min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
@@ -76,7 +140,29 @@ export default function Profile() {
                   name: "",
                   photo: null,
                 }}
-                onSubmit={(values) => console.log(values)}
+                onSubmit={(values) => {
+                  (async function () {
+                    setLoading(true);
+                    try {
+                      const keyRequest = await fetch("/api/upload");
+                      const keyData = await keyRequest.json();
+                      const upload = await pinata.upload
+                        .file(values.photo as unknown as File)
+                        .key(keyData.JWT);
+
+                      console.log(upload, "upload");
+
+                      await createUser(
+                        values.name,
+                        `https://gateway.pinata.cloud/ipfs/${upload.IpfsHash}`
+                      );
+                    } catch (error: any) {
+                      console.log(error);
+                    } finally {
+                      setLoading(false);
+                    }
+                  })();
+                }}
               >
                 {(formik) => (
                   <Form className="flex flex-col gap-6">
@@ -134,7 +220,14 @@ export default function Profile() {
                       />
                     </div>
 
-                    <Button type="submit">Confirm</Button>
+                    {loading ? (
+                      <Button disabled className="w-full">
+                        <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                        Please wait
+                      </Button>
+                    ) : (
+                      <Button type="submit">Confirm</Button>
+                    )}
                   </Form>
                 )}
               </Formik>
@@ -147,23 +240,25 @@ export default function Profile() {
         <div className="h-[800px] lg:h-full lg:w-1/3 w-full">
           <div className="border-2 rounded-lg border-slate-800 h-full w-full overflow-hidden flex flex-col justify-start">
             <img
-              src="/taylor.png"
+              src={(userDetails && userDetails.profilePic) || "/taylor.jpg"}
               alt="taylor"
               className="w-full h-2/3 object-cover"
             />
             <div className="h-1/3 w-full flex flex-col justify-start mt-4 px-5">
               <div className="flex w-full justify-between items-center">
                 <p className="font-normal text-gray-800 text-3xl font-poppins">
-                  Taylor Swift
+                  {(userDetails && userDetails.name) || "Create your profile"}
                 </p>
-                <Button
-                  size="icon"
-                  onClick={() => setOpen(true)}
-                  variant={"outline"}
-                  className="rounded-full border-2 border-slate-800"
-                >
-                  <Pencil className="h-5 w-5" />
-                </Button>
+                {!userDetails && (
+                  <Button
+                    size="icon"
+                    onClick={() => setOpen(true)}
+                    variant={"outline"}
+                    className="rounded-full border-2 border-slate-800"
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </Button>
+                )}
               </div>
               <p className="font-normal text-gray-800 font-poppins text-sm">
                 {wallet &&

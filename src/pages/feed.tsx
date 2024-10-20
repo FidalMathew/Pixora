@@ -34,7 +34,7 @@ export default function Feed() {
   console.log(allRemixes, "allRemixes");
   return (
     <div
-      className={`h-full w-full bg-white text-black dark:bg-black dark:text-white`}
+      className={`h-fit min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
     >
       <Navbar />
       <div

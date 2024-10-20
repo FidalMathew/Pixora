@@ -927,7 +927,7 @@ export default function AddPost() {
                   )} */}
                 </div>
 
-                <Button
+                {/* <Button
                   type="submit"
                   className="w-full h-10 rounded-full border border-slate-800 focus-visible:ring-0"
                   disabled={imageUrl === "" || ipfsUrl !== ""}
@@ -946,7 +946,7 @@ export default function AddPost() {
                   // }}
                 >
                   Mint and Create Post --test
-                </Button>
+                </Button> */}
 
                 <Button
                   className="rounded-full"
