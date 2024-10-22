@@ -32,6 +32,7 @@ export default function Feed() {
   const {createPost, allPosts, allRemixes} = useGlobalContext();
   console.log(allPosts, "allPosts");
   console.log(allRemixes, "allRemixes");
+
   return (
     <div
       className={`h-fit min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
@@ -43,7 +44,7 @@ export default function Feed() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 max-w-5xl p-7 h-full w-full">
           {allPosts &&
             allPosts.length > 0 &&
-            allPosts.map((item, index) => (
+            allPosts.map(({item, user}, index) => (
               <div
                 className="w-full m-2 rounded-lg h-[400px] border-2 border-slate-700 overflow-hidden"
                 key={index}
@@ -56,17 +57,21 @@ export default function Feed() {
                   style={{height: "calc((100% * 5 / 6) - 50px)"}}
                 />
                 <div className="h-[50px] flex items-center px-5 gap-2 text-sm font-light">
-                  {/* <Avatar>
+                  <Avatar>
                     <AvatarImage
-                      src="/boy.png"
+                      src={user?.profilePic}
                       className="h-7 w-7 rounded-full"
                     />
                     <AvatarFallback>CN</AvatarFallback>
-                  </Avatar> */}
-                  <p>By</p>
-                  <p className="">
-                    {item.owner.slice(0, 10) + "..." + item.owner.slice(-4)}
-                  </p>
+                  </Avatar>
+                  {/* <p>By</p> */}
+
+                  <div className="flex flex-col justify-start">
+                    <p className="font-bold">{user?.name}</p>
+                    <p className="text-xs">
+                      {item.owner.slice(0, 10) + "..." + item.owner.slice(-4)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between px-4 h-1/6">
                   <Button
@@ -92,7 +97,7 @@ export default function Feed() {
             ))}
           {allRemixes &&
             allRemixes.length > 0 &&
-            allRemixes.map((item, index) => (
+            allRemixes.map(({item, user}, index) => (
               <div
                 className="w-full m-2 rounded-lg h-[400px] border-2 border-slate-700 overflow-hidden"
                 key={index}
@@ -105,15 +110,19 @@ export default function Feed() {
                   style={{height: "calc((100% * 5 / 6) - 50px)"}}
                 />
                 <div className="h-[50px] flex items-center px-5 gap-2 text-sm font-light">
-                  {/* <Avatar>
+                  <Avatar>
                     <AvatarImage
-                      src="/boy.png"
+                      src={user?.profilePic}
                       className="h-7 w-7 rounded-full"
                     />
                     <AvatarFallback>CN</AvatarFallback>
-                  </Avatar> */}
-                  <p>By</p>
-                  <p className="">{item.owner}</p>
+                  </Avatar>
+                  <div className="flex flex-col justify-start">
+                    <p className="font-bold">{user?.name}</p>
+                    <p className="text-xs">
+                      {item.owner.slice(0, 10) + "..." + item.owner.slice(-4)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between px-4 h-1/6">
                   <Button

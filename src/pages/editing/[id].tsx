@@ -25,7 +25,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {CircleCheck, CircleX} from "lucide-react";
+import {CircleCheck, CircleX, ImageMinus, Save, Upload} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function EditingPage() {
   const router = useRouter();
@@ -459,8 +465,8 @@ export default function EditingPage() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-      <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
-        <div>Pixora</div>
+      {/* <div className="w-full h-[70px] font-poppins font-semibold text-lg border-b flex items-center justify-between px-6">
+        <div onClick={router.push('/')} className="">Pixora</div>
         <div className="flex items-center gap-3">
           <img
             src={"/user.png"}
@@ -469,7 +475,8 @@ export default function EditingPage() {
           />
           <Button variant="outline">Post the edit</Button>
         </div>
-      </div>
+      </div> */}
+      <Navbar />
       <div
         className="p-5 flex gap-3"
         style={{
@@ -622,25 +629,61 @@ export default function EditingPage() {
             )}
           </Formik>
 
-          <Button onClick={saveCombinedImage} className="mt-2 w-full">
-            Save Combined Image
-          </Button>
-          <Button
-            onClick={() => removeBg(postInfo?.imageUrl)}
-            // onClick={() => saveImage()}
-          >
-            Remove BG
-          </Button>
-          <Button
-            onClick={() => {
-              setOpenStatus(true);
-              handleCreatingRemixAndMint();
-            }}
-            // onClick={() => saveImage()}
-          >
-            Mint and Upload Remix
-          </Button>
-
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            {" "}
+            {/* Create a grid with 3 columns */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    onClick={saveCombinedImage}
+                    variant={"outline"}
+                    className="w-full flex items-center justify-center"
+                  >
+                    <Save className="h-5 w-5" /> {/* Icon with margin */}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Save the combined image</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    variant={"outline"}
+                    onClick={() => removeBg(postInfo?.imageUrl)}
+                    className="w-full flex items-center justify-center"
+                  >
+                    <ImageMinus className="h-5 w-5" /> {/* Icon with margin */}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Remove the background</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    variant={"outline"}
+                    onClick={() => {
+                      setOpenStatus(true);
+                      handleCreatingRemixAndMint();
+                    }}
+                    className="w-full flex items-center justify-center"
+                  >
+                    <Upload className="h-5 w-5" /> {/* Icon with margin */}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Mint and add the post</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           {target === null ? (
             <div className="flex flex-col border rounded-xl gap-4">
               <p className="px-4 pt-4">Editing the Background</p>

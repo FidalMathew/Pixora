@@ -3,6 +3,7 @@ import {CircleUserRound, Plus} from "lucide-react";
 import {Button} from "./ui/button";
 import {useEffect} from "react";
 import {useRouter} from "next/router";
+import {useGlobalContext} from "@/context/GlobalContext";
 
 export default function Navbar() {
   const {logout, authenticated, user, ready} = usePrivy();
@@ -10,6 +11,8 @@ export default function Navbar() {
   const router = useRouter();
   const {wallets} = useWallets();
   const wallet = wallets[0];
+
+  const {userDetails} = useGlobalContext();
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -23,7 +26,7 @@ export default function Navbar() {
       </div>
       <div className="flex items-center gap-3">
         <img
-          src={"/user.png"}
+          src={userDetails?.profilePic}
           onClick={() => router.push("/profile")}
           alt="user"
           className="h-8 w-8 border rounded-full border-gray-700 cursor-pointer"

@@ -53,6 +53,7 @@ const GlobalContext = createContext({
   getRemixesByPostId: (postId: number) => Promise.resolve([]),
   allPosts: [] as any[],
   allRemixes: [] as any[],
+  userDetails: {} as any,
 });
 
 export default function GlobalContextProvider({
@@ -283,8 +284,29 @@ export default function GlobalContextProvider({
           functionName: "getAllPosts",
         });
 
-        setAllPosts(data as any[]);
-        console.log(data, "All Posts");
+        if (data) {
+          const result = await Promise.all(
+            (data as any[]).map(async (item: any) => {
+              const user = await publicClient.readContract({
+                address: CONTRACT_ADDRESS as Hex,
+                abi: PIXORA_ABI,
+                functionName: "getUser",
+                args: [item.owner],
+              });
+
+              return {
+                user,
+                item,
+              };
+            })
+          );
+
+          console.log(result, "result");
+          setAllPosts(result);
+        }
+
+        // setAllPosts(data as any[]);
+        // console.log(data, "All Posts");
       }
     } catch (error) {
       console.error("Error fetching all posts:", error);
@@ -300,9 +322,26 @@ export default function GlobalContextProvider({
           functionName: "getAllRemixes",
         });
 
-        setAllRemixes(data as any[]);
+        if (data) {
+          const result = await Promise.all(
+            (data as any[]).map(async (item: any) => {
+              const user = await publicClient.readContract({
+                address: CONTRACT_ADDRESS as Hex,
+                abi: PIXORA_ABI,
+                functionName: "getUser",
+                args: [item.owner],
+              });
 
-        console.log(data, "All Remixes");
+              return {
+                user,
+                item,
+              };
+            })
+          );
+
+          console.log(result, "result");
+          setAllRemixes(result);
+        }
       }
     } catch (error) {
       console.error("Error fetching all remixes:", error);
@@ -355,6 +394,42 @@ export default function GlobalContextProvider({
     return [];
   };
 
+  const [userDetails, setUserDetails] = useState<any>([]);
+
+  const getUserDetailsFunction = async () => {
+    try {
+      if (publicClient && walletClient && loggedInAddress) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "getUser",
+          args: [loggedInAddress],
+        });
+
+        console.log(data, "user Details");
+
+        if (data) {
+          setUserDetails(data);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching post details:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (provider && walletClient && publicClient && loggedInAddress) {
+      getUserDetailsFunction();
+    }
+  }, [walletClient, publicClient, provider, loggedInAddress]);
+
+  // useEffect(() => {
+  //   if (provider && walletClient && publicClient) {
+  //   }
+  // }, [walletClient, publicClient, provider, loggedInAddress, CONTRACT_ADDRESS]);
+
+  console.log(userDetails, "userDetails");
+
   return (
     <GlobalContext.Provider
       value={{
@@ -377,6 +452,7 @@ export default function GlobalContextProvider({
         getRemixesByPostId,
         allPosts,
         allRemixes,
+        userDetails,
       }}
     >
       {children}

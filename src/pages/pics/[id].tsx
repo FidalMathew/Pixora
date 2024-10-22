@@ -12,47 +12,24 @@ import PIXORA_ABI from "@/utils/abi.json";
 export default function EachPicturePage() {
   const router = useRouter();
   console.log(router.query.id);
-  const [userDetails, setUserDetails] = useState<any>([]);
 
   const {
     getPostDetails,
     walletClient,
     publicClient,
     provider,
-    loggedInAddress,
+    userDetails,
     CONTRACT_ADDRESS,
+    loggedInAddress,
     getRemixesByPostId,
   } = useGlobalContext();
 
   const [postInfo, setPostInfo] = useState<any>(null);
   const [remixes, setRemixes] = useState<any>([]);
 
-  useEffect(() => {
-    (async function () {
-      if (provider && walletClient && publicClient) {
-        console.log(router.query.id, "router.query.id");
-
-        const postId = parseInt(router.query.id as string);
-        const val = await getPostDetails(postId);
-        console.log(val, "val");
-
-        if (val) {
-          setPostInfo(val);
-        }
-
-        const res = await getRemixesByPostId(postId);
-        console.log(res, "remixes");
-
-        if (Array.isArray(res)) {
-          setRemixes(res);
-        }
-      }
-    })();
-  }, [provider, walletClient, publicClient, router.query.id]);
-
-  const getUserDetailsFunction = async (address: string) => {
+  const getUserDetailsByAddress = async (address: string) => {
     try {
-      if (publicClient) {
+      if (publicClient && walletClient && loggedInAddress) {
         const data = await publicClient.readContract({
           address: CONTRACT_ADDRESS as Hex,
           abi: PIXORA_ABI,
@@ -61,22 +38,62 @@ export default function EachPicturePage() {
         });
 
         console.log(data, "user Details");
-
-        if (data) {
-          setUserDetails(data);
-        }
+        return data as any[];
       }
     } catch (error) {
       console.error("Error fetching post details:", error);
     }
   };
 
-  // useEffect(() => {
-  //   if (provider && walletClient && publicClient) {
-  //   }
-  // }, [walletClient, publicClient, provider, loggedInAddress, CONTRACT_ADDRESS]);
+  useEffect(() => {
+    (async function () {
+      if (provider && walletClient && publicClient && userDetails) {
+        console.log(router.query.id, "router.query.id");
 
-  console.log(userDetails, "userDetails");
+        const postId = parseInt(router.query.id as string);
+        const val = await getPostDetails(postId);
+
+        if (val) {
+          // @ts-ignore
+          const postInformation = await getUserDetailsByAddress(val.owner);
+
+          setPostInfo({
+            ...val,
+            user: postInformation,
+          });
+        }
+
+        const res = await getRemixesByPostId(postId);
+
+        console.log(userDetails, "userDetails");
+        console.log(res, "remixes");
+
+        if (Array.isArray(res)) {
+          // setRemixes(res);
+
+          // merge the remixes data with the original data
+          const remixesData = await Promise.all(
+            res.map(async (item: any) => {
+              const user = await getUserDetailsByAddress(item.owner);
+
+              console.log(user, "userrrrrrr");
+              console.log(item, "item");
+              return {
+                user,
+                item,
+              };
+            })
+          );
+
+          console.log(remixesData, "remixesData");
+
+          setRemixes(remixesData);
+        }
+      }
+    })();
+  }, [provider, walletClient, publicClient, router.query.id, userDetails]);
+
+  console.log(postInfo, "postInfomation");
 
   return (
     <div
@@ -92,7 +109,7 @@ export default function EachPicturePage() {
             <div className="h-fit flex items-center px-5 gap-2 text-lg font-semibold">
               <Avatar>
                 <AvatarImage
-                  src={postInfo?.imageUrl}
+                  src={postInfo?.user.profilePic}
                   className="h-14 w-14 rounded-full overflow-hidden object-cover"
                 />
                 <AvatarFallback>CN</AvatarFallback>
@@ -100,7 +117,16 @@ export default function EachPicturePage() {
               <div className="flex flex-col justify-start gap-0">
                 <p className="text-sm font-normal">Creator</p>
                 <p className="text-lg font-semibold">
-                  {postInfo?.owner.slice(0, 6)}...{postInfo?.owner.slice(-4)}
+                  {/* {remixInfo?.owner.slice(0, 6)}...
+                    {remixInfo?.owner.slice(-4)} */}
+                  {postInfo?.user.name}{" "}
+                  <span className="text-xs">
+                    {`(${
+                      postInfo?.owner.slice(0, 6) +
+                      "..." +
+                      postInfo?.owner.slice(-4)
+                    })`}
+                  </span>
                 </p>
               </div>
             </div>
@@ -115,35 +141,46 @@ export default function EachPicturePage() {
               </div>
               <p className="font-semibold">Remixed By</p>
               <div className="flex flex-col h-[430px] w-full mb-5 gap-4 overflow-y-auto scroll-container p-2">
-                {remixes.map((item: any, index: Key | null | undefined) => (
-                  <div
-                    className="h-[70px] w-full border border-black rounded-md flex-shrink-0 flex items-center justify-around"
-                    key={index}
-                  >
-                    <Avatar>
-                      <AvatarImage
-                        src={item.imageUrl}
-                        className="h-10 w-10 rounded-full overflow-hidden object-cover"
-                      />
-                      <AvatarFallback>CN</AvatarFallback>
-                    </Avatar>
-                    <p>
-                      {item.owner.slice(0, 6)}...{item?.owner.slice(-4)}
-                    </p>
-                    <Button
-                      className="rounded-full border border-slate-800 focus-visible:ring-0"
-                      variant={"outline"}
-                      size={"icon"}
-                      onClick={() => {
-                        if (typeof index === "number") {
-                          router.push(`/remix/${Number(item.remixId)}`);
-                        }
-                      }}
-                    >
-                      <Shuffle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                {remixes &&
+                  remixes.map(
+                    ({item, user}: any, index: Key | null | undefined) => (
+                      <div
+                        className="h-[70px] w-full border border-black rounded-md flex-shrink-0 flex items-center justify-around"
+                        key={index}
+                      >
+                        <Avatar>
+                          <AvatarImage
+                            src={user?.profilePic}
+                            className="h-10 w-10 rounded-full overflow-hidden object-cover"
+                          />
+                          <AvatarFallback>CN</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <p className="font-bold">
+                            {
+                              // @ts-ignore
+                              user?.name
+                            }
+                          </p>
+                          <p className="text-sm">
+                            {item.owner.slice(0, 6)}...{item?.owner.slice(-4)}
+                          </p>
+                        </div>
+                        <Button
+                          className="rounded-full border border-slate-800 focus-visible:ring-0"
+                          variant={"outline"}
+                          size={"icon"}
+                          onClick={() => {
+                            if (typeof index === "number") {
+                              router.push(`/remix/${Number(item.remixId)}`);
+                            }
+                          }}
+                        >
+                          <Shuffle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  )}
               </div>
             </div>
           </div>

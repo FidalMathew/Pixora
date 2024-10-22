@@ -49,10 +49,49 @@ export default function Profile() {
     provider,
     loggedInAddress,
     CONTRACT_ADDRESS,
+    userDetails,
+    getRemixesByPostId,
   } = useGlobalContext();
 
   const [posts, setPosts] = useState<any[]>([]);
   const [remixes, setRemixes] = useState<any[]>([]);
+
+  const getUserDetailsByAddress = async (address: string) => {
+    try {
+      if (publicClient && walletClient && loggedInAddress && userDetails) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "getUser",
+          args: [address],
+        });
+
+        console.log(data, "user Details");
+        return data as any[];
+      }
+    } catch (error) {
+      console.error("Error fetching post details:", error);
+    }
+  };
+
+  const getRemixById = async (remixId: string) => {
+    try {
+      if (publicClient && walletClient && loggedInAddress && provider) {
+        const data = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "getRemix",
+          args: [remixId],
+        });
+
+        console.log(data, "remix by id");
+        return data as any[];
+      }
+    } catch (error) {
+      console.error("Error fetching post details:", error);
+      return [];
+    }
+  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -61,7 +100,55 @@ export default function Profile() {
 
         const res = await getUserPosts(wallet.address);
         console.log(res, "user posts");
-        setPosts(res);
+        if (res) {
+          const val = await Promise.all(
+            res.map(async (post) => {
+              const val1 = await getUserDetailsByAddress(post.owner);
+              if (val1) {
+                return {
+                  ...post,
+                  // @ts-ignore
+                  profilePic: val1?.profilePic,
+                  // @ts-ignore
+                  name: val1?.name,
+                };
+              }
+            })
+          );
+
+          setPosts(val);
+
+          const remixObjects = await Promise.all(
+            res.map(async (post) => {
+              const val1 = await getRemixesByPostId(post.postId);
+              return val1 && val1.length > 0 ? val1 : []; // Return the array of remixes or an empty array
+            })
+          );
+
+          // Flatten the result directly into a single array using flatMap
+          const allRemixes = remixObjects.flatMap((remixes) => remixes); // No array of arrays, just one flat array of remixes
+          // console.log(allRemixes, "444444");
+          if (allRemixes.length > 0) {
+            const val = await Promise.all(
+              allRemixes.map(async (remix: any) => {
+                const val4 = await getUserDetailsByAddress(remix.owner);
+                if (val4) {
+                  return {
+                    ...remix,
+                    // @ts-ignore
+                    profilePic: val4?.profilePic,
+                    // @ts-ignore
+                    name: val4?.name,
+                  };
+                }
+              })
+            );
+
+            console.log(val, "44444444");
+
+            setRemixes(val);
+          }
+        }
       }
     };
     fetch();
@@ -92,37 +179,6 @@ export default function Profile() {
       return;
     }
   };
-
-  const [userDetails, setUserDetails] = useState<any>(null);
-
-  const getUserDetailsFunction = async () => {
-    try {
-      if (publicClient && loggedInAddress) {
-        const data = await publicClient.readContract({
-          address: CONTRACT_ADDRESS as Hex,
-          abi: PIXORA_ABI,
-          functionName: "getUser",
-          args: [loggedInAddress],
-        });
-
-        console.log(data, "user Details");
-
-        if (data) {
-          setUserDetails(data);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching post details:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (provider && walletClient && publicClient) {
-      getUserDetailsFunction();
-    }
-  }, [walletClient, publicClient, provider, loggedInAddress, CONTRACT_ADDRESS]);
-
-  console.log(userDetails, "userDetails");
 
   return (
     <div
@@ -287,8 +343,8 @@ export default function Profile() {
                 >
                   <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
                     <img
-                      src={album.imageUrl}
-                      alt={album.name}
+                      src={album?.imageUrl}
+                      alt={album?.name}
                       className={
                         "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
                       }
@@ -313,7 +369,7 @@ export default function Profile() {
           <TabsContent value="posts">hello</TabsContent>
         </Tabs> */}
         <div className="w-full lg:w-2/3 h-[900px] lg:h-full">
-          <Tabs defaultValue="posts" className="">
+          <Tabs defaultValue="remixbyusers" className="">
             <TabsList>
               <TabsTrigger value="remixbyusers">Remixes By User</TabsTrigger>
               <TabsTrigger value="posts">Posts</TabsTrigger>
@@ -335,12 +391,12 @@ export default function Profile() {
                     <div
                       className="overflow-hidden rounded-md flex flex-col gap-2 h-[95%] aspect-square"
                       key={index}
-                      onClick={() => router.push(`/pics/${album.postId}`)}
+                      onClick={() => router.push(`/pics/${album?.postId}`)}
                     >
                       <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
                         <img
-                          src={album.imageUrl}
-                          alt={album.name}
+                          src={album?.imageUrl}
+                          alt={album?.name}
                           className={
                             "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
                           }
@@ -351,62 +407,66 @@ export default function Profile() {
                           <p>By &nbsp;</p>
                           <Avatar>
                             <AvatarImage
-                              src="/boy.png"
+                              src={album?.profilePic}
                               className="h-5 w-5 rounded-full"
                             />
                             <AvatarFallback>CN</AvatarFallback>
                           </Avatar>
                         </div>
-                        <p className="">Jaydeep Dey</p>
+                        <p className="">{album?.name}</p>
                       </div>
                     </div>
                   ))}
               </div>
             </TabsContent>
             <TabsContent value="remixbyusers" className="w-full h-full">
-              <div
-                className="grid grid-cols-2 gap-4 h-[95%] w-full p-6"
-                style={{
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                }}
-              >
+              <>
                 {remixes && remixes.length === 0 && (
                   <div className="h-full w-full flex justify-center items-center">
                     <p className="text-2xl font-semibold">No Posts Yet</p>
                   </div>
                 )}
-                {remixes &&
-                  remixes.slice(0, 4).map((album, index) => (
-                    <div
-                      className="overflow-hidden rounded-md flex flex-col gap-2 h-[95%] aspect-square"
-                      key={index}
-                      onClick={() => router.push(`/pics/${album.postId}`)}
-                    >
-                      <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
-                        <img
-                          src={album.imageUrl}
-                          alt={album.name}
-                          className={
-                            "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
-                          }
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 text-sm">
-                        <div className="flex items-center text-sm">
-                          <p>By &nbsp;</p>
-                          <Avatar>
-                            <AvatarImage
-                              src="/boy.png"
-                              className="h-5 w-5 rounded-full"
-                            />
-                            <AvatarFallback>CN</AvatarFallback>
-                          </Avatar>
+                <div
+                  className="grid grid-cols-2 gap-4 h-[95%] w-full p-6"
+                  style={{
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(200px, 1fr))",
+                  }}
+                >
+                  {remixes &&
+                    remixes.slice(0, 4).map((album, index) => (
+                      <div
+                        className="overflow-hidden rounded-md flex flex-col gap-2 h-[95%] aspect-square"
+                        key={index}
+                        onClick={() =>
+                          router.push(`/remix/${Number(album?.remixId)}`)
+                        }
+                      >
+                        <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
+                          <img
+                            src={album?.imageUrl}
+                            alt={album?.name}
+                            className={
+                              "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
+                            }
+                          />
                         </div>
-                        <p className="">Jaydeep Dey</p>
+                        <div className="flex items-center gap-1 text-sm">
+                          <div className="flex items-center text-sm">
+                            <Avatar>
+                              <AvatarImage
+                                src={album?.profilePic}
+                                className="h-5 w-5 rounded-full"
+                              />
+                              <AvatarFallback>CN</AvatarFallback>
+                            </Avatar>
+                          </div>
+                          <p className="">{album?.name}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+              </>
             </TabsContent>
           </Tabs>
         </div>
