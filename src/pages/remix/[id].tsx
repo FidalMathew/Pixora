@@ -4,11 +4,14 @@ import {Button} from "@/components/ui/button";
 import {useGlobalContext} from "@/context/GlobalContext";
 import {Avatar, AvatarFallback, AvatarImage} from "@radix-ui/react-avatar";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
-import {Heart, Share, Shuffle} from "lucide-react";
+import {Bookmark, Check, Heart, Share, Shuffle, Sparkles} from "lucide-react";
 import {useRouter} from "next/router";
 import {useEffect, useState} from "react";
 import {Hex} from "viem";
 import PIXORA_ABI from "@/utils/abi.json";
+import {iliad} from "@story-protocol/core-sdk";
+import {toast} from "sonner";
+import {Badge} from "@/components/ui/badge";
 
 export default function EachPicturePage() {
   const router = useRouter();
@@ -91,7 +94,33 @@ export default function EachPicturePage() {
     })();
   }, [provider, walletClient, publicClient, router]);
 
-  console.log(postInfo, "postInfo");
+  const addRemixToTopPick = async () => {
+    try {
+      toast.loading("Adding to top pick");
+      if (publicClient && walletClient && postInfo) {
+        const tx = await walletClient.writeContract({
+          address: CONTRACT_ADDRESS as Hex,
+          abi: PIXORA_ABI,
+          functionName: "topPickByArtist",
+          account: loggedInAddress as Hex,
+          args: [parseInt(router.query.id as string), postInfo.postId],
+          chain: iliad,
+        });
+        await publicClient.waitForTransactionReceipt({
+          hash: tx,
+        });
+
+        toast.success("Added to top pick");
+
+        router.reload();
+      }
+    } catch (error) {
+      console.error("Error adding to top pick:", error);
+      toast.error("Error adding to top pick");
+    }
+  };
+
+  console.log(postInfo, "fucku");
 
   return (
     <div
@@ -129,6 +158,44 @@ export default function EachPicturePage() {
                   </p>
                 </div>
               </div>
+
+              {postInfo &&
+                postInfo.owner === loggedInAddress &&
+                postInfo.topRemixesOfPost.length > 3 &&
+                (postInfo.topRemixesOfPost
+                  .map((item: bigint) => Number(item))
+                  .includes(parseInt(router.query.id as string)) ? (
+                  <Button
+                    size={"icon"}
+                    className={`ml-auto`}
+                    variant={`default`}
+                  >
+                    <Check className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <Button
+                    size={"icon"}
+                    className={`ml-auto`}
+                    variant={`outline`}
+                    onClick={() => addRemixToTopPick()}
+                  >
+                    <Bookmark className="h-5 w-5" />
+                  </Button>
+                ))}
+            </div>
+            <div className="max-w-fit m-auto flex gap-3 items-center">
+              {postInfo &&
+                postInfo.owner !== loggedInAddress &&
+                postInfo.topRemixesOfPost
+                  .map((item: bigint) => Number(item))
+                  .includes(parseInt(router.query.id as string)) && (
+                  <Badge variant="default" className="flex gap-2 items-center">
+                    <Sparkles className="h-3 w-3" />
+                    <span className="text-xs font-semibold">
+                      Top Pick by Artist
+                    </span>
+                  </Badge>
+                )}
             </div>
             <div className="flex flex-col justify-start h-full w-full px-5 gap-4 mb-3">
               <div className="h-[47px] w-full flex items-center">

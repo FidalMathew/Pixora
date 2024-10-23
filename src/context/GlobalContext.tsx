@@ -73,7 +73,7 @@ export default function GlobalContextProvider({
   const [allRemixes, setAllRemixes] = useState<any[]>([]);
 
   // const CONTRACT_ADDRESS = "0x7a824c85043391560A18eEd0f5460E5B659752A6";
-  const CONTRACT_ADDRESS = "0x519a9057Bfe3e6bab6EDb7128b7Dba44d2adC083";
+  const CONTRACT_ADDRESS = "0xEDAA4497349fb00a6BFb7470507964159A816d04";
   // const PIXORA_ABI: never[] = []
   const [storyClient, setStoryClient] = useState<StoryClient | null>(null);
 
@@ -423,12 +423,24 @@ export default function GlobalContextProvider({
     }
   }, [walletClient, publicClient, provider, loggedInAddress]);
 
-  // useEffect(() => {
-  //   if (provider && walletClient && publicClient) {
-  //   }
-  // }, [walletClient, publicClient, provider, loggedInAddress, CONTRACT_ADDRESS]);
-
   console.log(userDetails, "userDetails");
+
+  useEffect(() => {
+    if (ready && provider && walletClient && publicClient) {
+      setTimeout(() => {
+        if (ready && userDetails?.name) {
+          router.push("/profile");
+        }
+      }, 4000);
+    }
+  }, [
+    ready,
+    walletClient,
+    publicClient,
+    provider,
+    loggedInAddress,
+    CONTRACT_ADDRESS,
+  ]);
 
   return (
     <GlobalContext.Provider

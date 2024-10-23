@@ -50,6 +50,8 @@ export default function Profile() {
     loggedInAddress,
     CONTRACT_ADDRESS,
     userDetails,
+    allRemixes,
+
     getRemixesByPostId,
   } = useGlobalContext();
 
@@ -180,6 +182,26 @@ export default function Profile() {
     }
   };
 
+  console.log(remixes, "all remixes");
+
+  const [myRemixes, setMyRemixes] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (
+      publicClient &&
+      walletClient &&
+      provider &&
+      loggedInAddress &&
+      allRemixes
+    ) {
+      const myRemixes = allRemixes.filter(
+        ({user}) => user.userAddress === loggedInAddress
+      );
+      console.log(myRemixes, "my remixes");
+      setMyRemixes(myRemixes);
+    }
+  }, [publicClient, walletClient, provider, loggedInAddress]);
+
   return (
     <div
       className={`h-screen min-h-screen w-full bg-white text-black dark:bg-black dark:text-white`}
@@ -296,7 +318,10 @@ export default function Profile() {
         <div className="h-[800px] lg:h-full lg:w-1/3 w-full">
           <div className="border-2 rounded-lg border-slate-800 h-full w-full overflow-hidden flex flex-col justify-start">
             <img
-              src={(userDetails && userDetails.profilePic) || "/taylor.jpg"}
+              src={
+                userDetails?.profilePic ||
+                "https://media.istockphoto.com/id/517998264/vector/male-user-icon.jpg?s=612x612&w=0&k=20&c=4RMhqIXcJMcFkRJPq6K8h7ozuUoZhPwKniEke6KYa_k="
+              }
               alt="taylor"
               className="w-full h-2/3 object-cover"
             />
@@ -305,7 +330,7 @@ export default function Profile() {
                 <p className="font-normal text-gray-800 text-3xl font-poppins">
                   {(userDetails && userDetails.name) || "Create your profile"}
                 </p>
-                {!userDetails && (
+                {userDetails && userDetails.length === 0 && (
                   <Button
                     size="icon"
                     onClick={() => setOpen(true)}
@@ -373,59 +398,69 @@ export default function Profile() {
             <TabsList>
               <TabsTrigger value="remixbyusers">Remixes By User</TabsTrigger>
               <TabsTrigger value="posts">Posts</TabsTrigger>
+              <TabsTrigger value="myremixes"> My Remix</TabsTrigger>
             </TabsList>
             <TabsContent value="posts" className="w-full h-full">
-              <div
-                className="grid grid-cols-2 gap-4 h-[95%] w-full p-6"
-                style={{
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                }}
-              >
-                {posts && posts.length === 0 && (
-                  <div className="h-full w-full flex justify-center items-center">
-                    <p className="text-2xl font-semibold">No Posts Yet</p>
-                  </div>
-                )}
-                {posts &&
-                  posts.slice(0, 4).map((album, index) => (
-                    <div
-                      className="overflow-hidden rounded-md flex flex-col gap-2 h-[95%] aspect-square"
-                      key={index}
-                      onClick={() => router.push(`/pics/${album?.postId}`)}
-                    >
-                      <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
-                        <img
-                          src={album?.imageUrl}
-                          alt={album?.name}
-                          className={
-                            "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
-                          }
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 text-sm">
-                        <div className="flex items-center text-sm">
-                          <p>By &nbsp;</p>
-                          <Avatar>
-                            <AvatarImage
-                              src={album?.profilePic}
-                              className="h-5 w-5 rounded-full"
-                            />
-                            <AvatarFallback>CN</AvatarFallback>
-                          </Avatar>
-                        </div>
-                        <p className="">{album?.name}</p>
-                      </div>
+              <>
+                <div className="mt-5">
+                  {posts && posts.length === 0 && (
+                    <div className="h-full w-full flex justify-center items-center">
+                      <p className="text-2xl font-semibold">No Posts Yet</p>
                     </div>
-                  ))}
-              </div>
+                  )}
+                </div>
+                <div
+                  className="grid grid-cols-2 gap-4 h-[95%] w-full p-6"
+                  style={{
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(200px, 1fr))",
+                  }}
+                >
+                  {posts &&
+                    posts.slice(0, 4).map((album, index) => (
+                      <div
+                        className="overflow-hidden rounded-md flex flex-col gap-2 h-[95%] aspect-square"
+                        key={index}
+                        onClick={() => router.push(`/pics/${album?.postId}`)}
+                      >
+                        <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
+                          <img
+                            src={album?.imageUrl}
+                            alt={album?.name}
+                            className={
+                              "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 text-sm">
+                          <div className="flex items-center text-sm">
+                            <p>By &nbsp;</p>
+                            <Avatar>
+                              <AvatarImage
+                                src={album?.profilePic}
+                                className="h-5 w-5 rounded-full"
+                              />
+                              <AvatarFallback>CN</AvatarFallback>
+                            </Avatar>
+                          </div>
+                          <p className="">{album?.name}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
             </TabsContent>
             <TabsContent value="remixbyusers" className="w-full h-full">
               <>
-                {remixes && remixes.length === 0 && (
-                  <div className="h-full w-full flex justify-center items-center">
-                    <p className="text-2xl font-semibold">No Posts Yet</p>
-                  </div>
-                )}
+                <div>
+                  {remixes && remixes.length === 0 && (
+                    <div className="h-full w-full flex justify-center items-center">
+                      <p className="text-2xl font-semibold">
+                        No one remixed Yet
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <div
                   className="grid grid-cols-2 gap-4 h-[95%] w-full p-6"
                   style={{
@@ -462,6 +497,59 @@ export default function Profile() {
                             </Avatar>
                           </div>
                           <p className="">{album?.name}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            </TabsContent>
+            <TabsContent value="myremixes" className="w-full h-full">
+              <>
+                <div>
+                  {myRemixes && myRemixes.length === 0 && (
+                    <div className="h-full w-full flex justify-center items-center">
+                      <p className="text-2xl font-semibold">
+                        No one remixed Yet
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="grid grid-cols-2 gap-4 h-[95%] w-full p-6"
+                  style={{
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(200px, 1fr))",
+                  }}
+                >
+                  {myRemixes &&
+                    myRemixes.map(({item, user}, index) => (
+                      <div
+                        className="overflow-hidden rounded-md flex flex-col gap-2 h-[95%] aspect-square"
+                        key={index}
+                        onClick={() =>
+                          router.push(`/remix/${Number(item?.remixId)}`)
+                        }
+                      >
+                        <div className="overflow-hidden rounded-md h-full lg:h-[90%] w-full">
+                          <img
+                            src={item?.imageUrl}
+                            alt={user?.name}
+                            className={
+                              "object-cover transition-all hover:scale-105 aspect-[3/4] object-center"
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 text-sm">
+                          <div className="flex items-center text-sm">
+                            <Avatar>
+                              <AvatarImage
+                                src={user?.profilePic}
+                                className="h-5 w-5 rounded-full"
+                              />
+                              <AvatarFallback>CN</AvatarFallback>
+                            </Avatar>
+                          </div>
+                          <p className="">{user?.name}</p>
                         </div>
                       </div>
                     ))}

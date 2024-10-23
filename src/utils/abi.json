@@ -458,6 +458,24 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_postId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_remixId",
+        "type": "uint256"
+      }
+    ],
+    "name": "topPickByArtist",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -564,6 +582,11 @@
             "internalType": "uint256",
             "name": "remixCount",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "topRemixesOfPost",
+            "type": "uint256[]"
           }
         ],
         "internalType": "struct Pixora.Post[]",
@@ -689,6 +712,11 @@
             "internalType": "uint256",
             "name": "remixCount",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "topRemixesOfPost",
+            "type": "uint256[]"
           }
         ],
         "internalType": "struct Pixora.Post",
@@ -908,6 +936,11 @@
             "internalType": "uint256",
             "name": "remixCount",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "topRemixesOfPost",
+            "type": "uint256[]"
           }
         ],
         "internalType": "struct Pixora.Post[]",
