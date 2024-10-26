@@ -69,26 +69,28 @@ export default function EachPicturePage() {
             });
           }
         }
-
-        const val2 = await getPostDetails(parseInt(router.query.id as string));
-        console.log(val2, "val5");
-
-        if (val2 !== undefined && val2 !== null) {
+        if (val) {
           // @ts-ignore
-          const val3 = await getUserDetailsByAddress(val2.owner);
+          const val2 = await getPostDetails(parseInt(val?.postId as string));
+          console.log(val2, "val5");
 
-          if (val3) {
+          if (val2 !== undefined && val2 !== null) {
             // @ts-ignore
-            setPostInfo({
-              ...val2,
-              // @ts-ignore
-              profilePic: val3.profilePic,
-              // @ts-ignore
-              name: val3.name,
-            });
-          }
+            const val3 = await getUserDetailsByAddress(val2.owner);
 
-          // setPostInfo(val2);
+            if (val3) {
+              // @ts-ignore
+              setPostInfo({
+                ...val2,
+                // @ts-ignore
+                profilePic: val3.profilePic,
+                // @ts-ignore
+                name: val3.name,
+              });
+            }
+
+            // setPostInfo(val2);
+          }
         }
       }
     })();
@@ -117,6 +119,8 @@ export default function EachPicturePage() {
     } catch (error) {
       console.error("Error adding to top pick:", error);
       toast.error("Error adding to top pick");
+    } finally {
+      toast.dismiss();
     }
   };
 
@@ -158,30 +162,40 @@ export default function EachPicturePage() {
                   </p>
                 </div>
               </div>
-
+              {console.log(
+                postInfo && postInfo.owner === loggedInAddress,
+                loggedInAddress,
+                "fucku1"
+              )}
               {postInfo &&
-                postInfo.owner === loggedInAddress &&
-                postInfo.topRemixesOfPost.length > 3 &&
-                (postInfo.topRemixesOfPost
-                  .map((item: bigint) => Number(item))
-                  .includes(parseInt(router.query.id as string)) ? (
-                  <Button
-                    size={"icon"}
-                    className={`ml-auto`}
-                    variant={`default`}
-                  >
-                    <Check className="h-5 w-5" />
-                  </Button>
-                ) : (
-                  <Button
-                    size={"icon"}
-                    className={`ml-auto`}
-                    variant={`outline`}
-                    onClick={() => addRemixToTopPick()}
-                  >
-                    <Bookmark className="h-5 w-5" />
-                  </Button>
-                ))}
+                loggedInAddress &&
+                postInfo.owner.toLowerCase() ===
+                  loggedInAddress.toLowerCase() && (
+                  <>
+                    {postInfo.topRemixesOfPost
+                      .map((item: bigint) => Number(item))
+                      .includes(parseInt(router.query.id as string)) ? (
+                      <Button
+                        size={"icon"}
+                        className={`ml-auto`}
+                        variant={`default`}
+                      >
+                        <Check className="h-5 w-5" />
+                      </Button>
+                    ) : (
+                      postInfo.topRemixesOfPost.length < 3 && (
+                        <Button
+                          size={"icon"}
+                          className={`ml-auto`}
+                          variant={`outline`}
+                          onClick={() => addRemixToTopPick()}
+                        >
+                          <Bookmark className="h-5 w-5" />
+                        </Button>
+                      )
+                    )}
+                  </>
+                )}
             </div>
             <div className="max-w-fit m-auto flex gap-3 items-center">
               {postInfo &&
